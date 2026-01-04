@@ -1,5 +1,6 @@
 package com.example.houses;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -27,8 +28,10 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-public class MainActivity extends AppCompatActivity {
 
+
+public class MainActivity extends AppCompatActivity {
+    private SharedPreferences preferences;
     private static final String SERVER_HTTP_HISTORY = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chat/history";
 
     private ChatAdapter adapter;
@@ -44,9 +47,15 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        preferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("login", "TEL2");
+        editor.apply();
+
         RecyclerView rv = findViewById(R.id.recyclerMessages);
         rv.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new ChatAdapter();
+        String login = preferences.getString("login", "account");
+        adapter = new ChatAdapter(login);
         rv.setAdapter(adapter);
 
         editMessage = findViewById(R.id.editMessage);
@@ -54,6 +63,9 @@ public class MainActivity extends AppCompatActivity {
         btnSend.setEnabled(false); // запрещаем до подключения STOMP
 
         httpClient = new OkHttpClient();
+
+
+
 
         loadHistory();
 
@@ -85,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
             String text = editMessage.getText().toString().trim();
             if (text.isEmpty()) return;
 
-            StompClient.MessageDTO payload = new StompClient.MessageDTO("Android", text);
+            StompClient.MessageDTO payload = new StompClient.MessageDTO(login, text);
             stompClient.send("/app/send", payload);
             editMessage.setText("");
         });

@@ -1,5 +1,8 @@
 package com.example.houses.adapter;
 
+import static android.content.Context.MODE_PRIVATE;
+
+import android.content.SharedPreferences;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,7 +19,15 @@ import java.util.List;
 
 public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.VH> {
 
+    private static final int TYPE_MY = 1;
+    private static final int TYPE_AN = 2;
+
     private final List<ChatMessage> items = new ArrayList<>();
+    private final String myLogin;
+
+    public ChatAdapter(String myLogin) {
+        this.myLogin = myLogin;
+    }
 
     public void addMessage(ChatMessage m) {
         items.add(m);
@@ -29,17 +40,29 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.VH> {
         notifyDataSetChanged();
     }
 
+    @Override
+    public int getItemViewType(int position) {
+        ChatMessage m = items.get(position);
+        return m.getSender().equals(myLogin) ? TYPE_MY : TYPE_AN;
+    }
+
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_message, parent, false);
+        int layout = (viewType == TYPE_MY)
+                ? R.layout.item_message_my
+                : R.layout.item_message_an;
+
+        View v = LayoutInflater.from(parent.getContext())
+                .inflate(layout, parent, false);
+
         return new VH(v);
     }
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
         ChatMessage m = items.get(position);
-        holder.tv.setText(m.getSender() + ": " + m.getContent());
+        holder.tv.setText(m.getSender()+": "+m.getContent());
     }
 
     @Override
@@ -49,6 +72,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.VH> {
 
     static class VH extends RecyclerView.ViewHolder {
         TextView tv;
+
         VH(@NonNull View itemView) {
             super(itemView);
             tv = itemView.findViewById(R.id.tvMessage);
