@@ -1,5 +1,6 @@
 package com.example.houses;
 
+
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -12,8 +13,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.houses.adapter.ChatAdapter;
-import com.example.houses.model.ChatMessage;
+import com.example.houses.adapter.TaskAdapter;
+import com.example.houses.model.Task;
 import com.example.houses.webSocket.StompClient;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -29,90 +30,92 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
+public class TaskActivity extends AppCompatActivity {
 
-
-public class MainActivity extends AppCompatActivity {
     private SharedPreferences preferences;
-    private static final String SERVER_HTTP_HISTORY = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chat/history/";
+    private static final String SERVER_HTTP_TASKS = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/tasks/";
 
-    private ChatAdapter adapter;
+    private TaskAdapter adapter;
     private StompClient stompClient;
     private OkHttpClient httpClient;
     private Gson gson = new Gson();
 
-    private EditText editMessage;
-    private Button btnSend;
+    private EditText editTitle, editDesc;
+    private Button btnCreate;
     private Button button_rec;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_task); // создадим пример разметки ниже
 
         preferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString("login", "TEL2");
-        editor.putString("chatId", "2");
-        editor.apply();
+        String chatId = preferences.getString("chatId", "1");
 
-        RecyclerView rv = findViewById(R.id.recyclerMessages);
+        RecyclerView rv = findViewById(R.id.recyclerTasks);
         rv.setLayoutManager(new LinearLayoutManager(this));
-        String login = preferences.getString("login", "account");
-        adapter = new ChatAdapter(login);
+        adapter = new TaskAdapter();
         rv.setAdapter(adapter);
 
-        editMessage = findViewById(R.id.editMessage);
-        btnSend = findViewById(R.id.btnSend);
+        editTitle = findViewById(R.id.editTaskTitle);
+        editDesc = findViewById(R.id.editTaskDesc);
+        btnCreate = findViewById(R.id.btnCreateTask);
         button_rec = findViewById(R.id.button_rec);
-        btnSend.setEnabled(false); // запрещаем до подключения STOMP
+
         button_rec.setOnClickListener(v -> {
             Intent intent = new Intent(this, TaskActivity.class);
             startActivity(intent);
         });
+
+
         httpClient = new OkHttpClient();
 
-        loadHistory();
+        loadTasks(chatId);
 
         stompClient = new StompClient(this);
-
         stompClient.setListener(new StompClient.StompListener() {
             @Override
             public void onConnected() {
-                Log.d("MainActivity", "STOMP connected");
-                runOnUiThread(() -> btnSend.setEnabled(true));
+                Log.d("TasksActivity", "WS connected");
+                stompClient.subscribeToTasks(chatId);
             }
 
             @Override
-            public void onChatMessage(ChatMessage message) {
+            public void onChatMessage(com.example.houses.model.ChatMessage message) {
+                // не используем на экране задач
+            }
+
+            @Override
+            public void onTask(Task task) {
                 runOnUiThread(() -> {
-                    adapter.addMessage(message);
-                    rv.smoothScrollToPosition(adapter.getItemCount() - 1);
+                    adapter.updateTask(task);
                 });
             }
 
             @Override
-            public void onTask(com.example.houses.model.Task task) {
-                // MainActivity не работает с задачами — игнорируем
-            }
-
-            @Override
             public void onError(String reason) {
-                Log.e("MainActivity", "STOMP error: " + reason);
+                Log.e("TasksActivity", "WS error: " + reason);
             }
         });
 
         stompClient.connect();
 
-        btnSend.setOnClickListener((View v) -> {
-            String text = editMessage.getText().toString().trim();
-            if (text.isEmpty()) return;
+        btnCreate.setOnClickListener((View v) -> {
+            String t = editTitle.getText().toString().trim();
+            String d = editDesc.getText().toString().trim();
+            if (t.isEmpty()) return;
 
-            StompClient.MessageDTO payload = new StompClient.MessageDTO(login, text);
-            stompClient.send(
-                    "/app/chat/" + preferences.getString("chatId","3") + "/send",
-                    new StompClient.MessageDTO(login ,text )
-            );
-            editMessage.setText("");
+            Task newTask = new Task();
+            newTask.setChatId(chatId);
+            newTask.setTitle(t);
+            newTask.setDescription(d);
+            newTask.setCompleted(false);
+
+            // отправляем через STOMP -> backend @MessageMapping("/tasks/{chatId}/create")
+            stompClient.sendTask(chatId, newTask);
+
+            editTitle.setText("");
+            editDesc.setText("");
         });
     }
 
@@ -122,30 +125,30 @@ public class MainActivity extends AppCompatActivity {
         if (stompClient != null) stompClient.disconnect();
     }
 
-    private void loadHistory() {
-        Request req = new Request.Builder().url(SERVER_HTTP_HISTORY+preferences.getString("chatId","3")).build();
+    private void loadTasks(String chatId) {
+        Request req = new Request.Builder().url(SERVER_HTTP_TASKS + chatId).build();
         httpClient.newCall(req).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                Log.e("MainActivity", "history fail", e);
+                Log.e("TasksActivity", "tasks history fail", e);
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 if (!response.isSuccessful()) {
-                    Log.e("MainActivity", "history not successful: " + response.code());
+                    Log.e("TasksActivity", "tasks history not successful: " + response.code());
                     return;
                 }
                 ResponseBody bodyObj = response.body();
                 if (bodyObj == null) return;
 
                 String body = bodyObj.string();
-                Type listType = new TypeToken<List<ChatMessage>>() {}.getType();
-                final List<ChatMessage> list;
+                Type listType = new TypeToken<List<Task>>() {}.getType();
+                final List<Task> list;
                 try {
                     list = gson.fromJson(body, listType);
                 } catch (Exception ex) {
-                    Log.e("MainActivity", "JSON parse error", ex);
+                    Log.e("TasksActivity", "JSON parse error", ex);
                     return;
                 }
                 if (list == null) return;
