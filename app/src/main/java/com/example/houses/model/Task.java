@@ -9,5 +9,7 @@ public class Task {
     private String title;
     private String description;
     private boolean completed;
+    private int money;
+
     private String createdAt;
 }

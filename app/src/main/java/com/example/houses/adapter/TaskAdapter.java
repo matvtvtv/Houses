@@ -58,6 +58,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         Task t = items.get(position);
         holder.title.setText(t.getTitle());
         holder.desc.setText(t.getDescription());
+        holder.money.setText(String.valueOf(t.getMoney()));
         holder.cbCompleted.setChecked(t.isCompleted());
         // можно добавить callback'и по нажатию на checkbox
     }
@@ -70,6 +71,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
     static class VH extends RecyclerView.ViewHolder {
         TextView title;
         TextView desc;
+        TextView money;
         CheckBox cbCompleted;
 
         VH(@NonNull View itemView) {
@@ -77,6 +79,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
             title = itemView.findViewById(R.id.tvTaskTitle);
             desc = itemView.findViewById(R.id.tvTaskDesc);
             cbCompleted = itemView.findViewById(R.id.cbTaskCompleted);
+            money=itemView.findViewById(R.id.tvTaskMoney);
         }
     }
 }

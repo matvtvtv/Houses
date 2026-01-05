@@ -2,10 +2,13 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="12dp"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:clickable="true"
+    android:focusableInTouchMode="true">
 
     <EditText
         android:id="@+id/editTaskTitle"
@@ -19,17 +22,17 @@
         android:layout_height="wrap_content"
         android:hint="Описание" />
 
+    <EditText
+        android:id="@+id/editTaskMoney"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Награда"
+        android:inputType="numberSigned" />
+
+    <!-- КНОПКИ -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
-
-        <Button
-            android:id="@+id/button_rec"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Button"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
 
         <Button
             android:id="@+id/btnCreateTask"
@@ -39,12 +42,22 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <Button
+            android:id="@+id/button_rec"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Button"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- СПИСОК -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerTasks"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_weight="1"
+        tools:listitem="@layout/item_task" />
 
 </LinearLayout>

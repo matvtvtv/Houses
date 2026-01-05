@@ -1,14 +1,21 @@
 package com.example.houses;
 
 
+import static com.google.android.material.internal.ViewUtils.hideKeyboard;
+
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -40,30 +47,34 @@ public class TaskActivity extends AppCompatActivity {
     private OkHttpClient httpClient;
     private Gson gson = new Gson();
 
-    private EditText editTitle, editDesc;
+    private EditText editTitle, editDesc,editMoney;
     private Button btnCreate;
     private Button button_rec;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_task); // создадим пример разметки ниже
 
         preferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         String chatId = preferences.getString("chatId", "1");
-
+        View root = findViewById(R.id.rootLayout);
         RecyclerView rv = findViewById(R.id.recyclerTasks);
         rv.setLayoutManager(new LinearLayoutManager(this));
         adapter = new TaskAdapter();
         rv.setAdapter(adapter);
-
+        root.setOnClickListener(v -> hideKeyboard());
         editTitle = findViewById(R.id.editTaskTitle);
         editDesc = findViewById(R.id.editTaskDesc);
+        editMoney = findViewById(R.id.editTaskMoney);
         btnCreate = findViewById(R.id.btnCreateTask);
         button_rec = findViewById(R.id.button_rec);
 
         button_rec.setOnClickListener(v -> {
-            Intent intent = new Intent(this, TaskActivity.class);
+            Intent intent = new Intent(this, MainActivity.class);
             startActivity(intent);
         });
 
@@ -71,6 +82,18 @@ public class TaskActivity extends AppCompatActivity {
         httpClient = new OkHttpClient();
 
         loadTasks(chatId);
+        rv.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView rv, int newState) {
+                if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
+                    View v = getCurrentFocus();
+                    if (v != null) {
+                        v.clearFocus();
+                        hideKeyboard(v);
+                    }
+                }
+            }
+        });
 
         stompClient = new StompClient(this);
         stompClient.setListener(new StompClient.StompListener() {
@@ -103,12 +126,15 @@ public class TaskActivity extends AppCompatActivity {
         btnCreate.setOnClickListener((View v) -> {
             String t = editTitle.getText().toString().trim();
             String d = editDesc.getText().toString().trim();
+            int m = Integer.parseInt(editMoney.getText().toString().trim());
             if (t.isEmpty()) return;
 
             Task newTask = new Task();
             newTask.setChatId(chatId);
             newTask.setTitle(t);
             newTask.setDescription(d);
+            newTask.setMoney(m);
+
             newTask.setCompleted(false);
 
             // отправляем через STOMP -> backend @MessageMapping("/tasks/{chatId}/create")
@@ -116,6 +142,7 @@ public class TaskActivity extends AppCompatActivity {
 
             editTitle.setText("");
             editDesc.setText("");
+            editMoney.setText("");
         });
     }
 
@@ -157,4 +184,36 @@ public class TaskActivity extends AppCompatActivity {
             }
         });
     }
+    private void hideKeyboard() {
+        View view = getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm =
+                    (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+            view.clearFocus();
+        }
+    }
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            View v = getCurrentFocus();
+            if (v instanceof EditText) {
+                Rect outRect = new Rect();
+                v.getGlobalVisibleRect(outRect);
+
+                if (!outRect.contains((int) event.getRawX(), (int) event.getRawY())) {
+                    v.clearFocus();
+                    hideKeyboard(v);
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event);
+    }
+    private void hideKeyboard(View view) {
+        InputMethodManager imm =
+                (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+    }
+
+
 }
