@@ -1,8 +1,5 @@
 package com.example.houses.adapter;
 
-import static android.content.Context.MODE_PRIVATE;
-
-import android.content.SharedPreferences;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,70 +9,53 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.houses.R;
-import com.example.houses.model.ChatMessage;
+import com.example.houses.model.ChatModel;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.VH> {
+public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder> {
 
-    private static final int TYPE_MY = 1;
-    private static final int TYPE_AN = 2;
+    private final List<ChatModel> chats;
+    private final OnChatClick listener;
 
-    private final List<ChatMessage> items = new ArrayList<>();
-    private final String myLogin;
-
-    public ChatAdapter(String myLogin) {
-        this.myLogin = myLogin;
+    public interface OnChatClick {
+        void onClick(ChatModel chat);
     }
 
-    public void addMessage(ChatMessage m) {
-        items.add(m);
-        notifyItemInserted(items.size() - 1);
-    }
-
-    public void setAll(List<ChatMessage> list) {
-        items.clear();
-        if (list != null) items.addAll(list);
-        notifyDataSetChanged();
-    }
-
-    @Override
-    public int getItemViewType(int position) {
-        ChatMessage m = items.get(position);
-        return m.getSender().equals(myLogin) ? TYPE_MY : TYPE_AN;
+    public ChatAdapter(List<ChatModel> chats, OnChatClick listener) {
+        this.chats = chats;
+        this.listener = listener;
     }
 
     @NonNull
     @Override
-    public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        int layout = (viewType == TYPE_MY)
-                ? R.layout.item_message_my
-                : R.layout.item_message_an;
-
+    public ChatViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
-                .inflate(layout, parent, false);
-
-        return new VH(v);
+                .inflate(R.layout.item_chat, parent, false);
+        return new ChatViewHolder(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull VH holder, int position) {
-        ChatMessage m = items.get(position);
-        holder.tv.setText(m.getSender()+": "+m.getContent());
+    public void onBindViewHolder(@NonNull ChatViewHolder holder, int position) {
+        ChatModel chat = chats.get(position);
+        holder.tvChatName.setText(chat.getChatName());
+        holder.tvRole.setText("Role: " + chat.getUserRole());
+
+        holder.itemView.setOnClickListener(v -> listener.onClick(chat));
     }
 
     @Override
     public int getItemCount() {
-        return items.size();
+        return chats.size();
     }
 
-    static class VH extends RecyclerView.ViewHolder {
-        TextView tv;
+    static class ChatViewHolder extends RecyclerView.ViewHolder {
+        TextView tvChatName, tvRole;
 
-        VH(@NonNull View itemView) {
+        public ChatViewHolder(@NonNull View itemView) {
             super(itemView);
-            tv = itemView.findViewById(R.id.tvMessage);
+            tvChatName = itemView.findViewById(R.id.tvChatName);
+            tvRole = itemView.findViewById(R.id.tvRole);
         }
     }
 }

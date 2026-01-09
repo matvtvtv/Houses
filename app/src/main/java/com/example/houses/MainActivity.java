@@ -3,47 +3,45 @@ package com.example.houses;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.houses.adapter.ChatAdapter;
-import com.example.houses.model.ChatMessage;
-import com.example.houses.webSocket.StompClient;
+import com.example.houses.model.ChatModel;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.List;
 
-import okhttp3.Call;
+import okhttp3.Call;       // <- правильный
+
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import okhttp3.ResponseBody;
-
-
 
 public class MainActivity extends AppCompatActivity {
     private SharedPreferences preferences;
-    private static final String SERVER_HTTP_HISTORY = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chat/history/";
+    RecyclerView rvChats;
+    FloatingActionButton fabCreate;
+    Button button;
+    ChatAdapter adapter;
+    List<ChatModel> chats = new ArrayList<>();
 
-    private ChatAdapter adapter;
-    private StompClient stompClient;
-    private OkHttpClient httpClient;
-    private Gson gson = new Gson();
-
-    private EditText editMessage;
-    private Button btnSend;
-    private Button button_rec;
-
+    String login;
+    String role;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,107 +49,81 @@ public class MainActivity extends AppCompatActivity {
 
         preferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
-        editor.putString("login", "TEL2");
-        editor.putString("chatId", "2");
+
+        boolean isFirstRun = preferences.getBoolean("isFirstRun", true);
+        if (isFirstRun) { startActivity(new Intent(this, RegistrationActivity.class));
+            editor.putBoolean("isFirstRun", false);
+            editor.apply();
+        }
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        login = prefs.getString("login", "");
+        role = prefs.getString("role", "");
+
+
+        rvChats = findViewById(R.id.rvChats);
+        fabCreate = findViewById(R.id.fabCreateChat);
+        button = findViewById(R.id.button);
+
+        rvChats.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new ChatAdapter(chats, chat -> openChat(chat));
+        rvChats.setAdapter(adapter);
+
+
+
+        fabCreate.setOnClickListener(v -> {
+            if(role=="PARENT"){
+            startActivity(new Intent(this, CreateChatActivity.class));
+            finish();}
+            else {
+                startActivity(new Intent(this, JoinChatActivity.class));
+                finish();
+            }
+        });
+        button.setOnClickListener(v -> {
+
+                startActivity(new Intent(this, RegistrationActivity.class));
+                finish();
+
+        });
+        loadChats();
         editor.apply();
-
-        RecyclerView rv = findViewById(R.id.recyclerMessages);
-        rv.setLayoutManager(new LinearLayoutManager(this));
-        String login = preferences.getString("login", "account");
-        adapter = new ChatAdapter(login);
-        rv.setAdapter(adapter);
-
-        editMessage = findViewById(R.id.editMessage);
-        btnSend = findViewById(R.id.btnSend);
-        button_rec = findViewById(R.id.button_rec);
-        btnSend.setEnabled(false); // запрещаем до подключения STOMP
-        button_rec.setOnClickListener(v -> {
-            Intent intent = new Intent(this, TaskActivity.class);
-            startActivity(intent);
-        });
-        httpClient = new OkHttpClient();
-
-        loadHistory();
-
-        stompClient = new StompClient(this);
-
-        stompClient.setListener(new StompClient.StompListener() {
-            @Override
-            public void onConnected() {
-                Log.d("MainActivity", "STOMP connected");
-                runOnUiThread(() -> btnSend.setEnabled(true));
-            }
-
-            @Override
-            public void onChatMessage(ChatMessage message) {
-                runOnUiThread(() -> {
-                    adapter.addMessage(message);
-                    rv.smoothScrollToPosition(adapter.getItemCount() - 1);
-                });
-            }
-
-            @Override
-            public void onTask(com.example.houses.model.Task task) {
-                // MainActivity не работает с задачами — игнорируем
-            }
-
-            @Override
-            public void onError(String reason) {
-                Log.e("MainActivity", "STOMP error: " + reason);
-            }
-        });
-
-        stompClient.connect();
-
-        btnSend.setOnClickListener((View v) -> {
-            String text = editMessage.getText().toString().trim();
-            if (text.isEmpty()) return;
-
-            StompClient.MessageDTO payload = new StompClient.MessageDTO(login, text);
-            stompClient.send(
-                    "/app/chat/" + preferences.getString("chatId","3") + "/send",
-                    new StompClient.MessageDTO(login ,text )
-            );
-            editMessage.setText("");
-        });
     }
+    private void loadChats() {
+        String url = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chats_data/get_chats/" + login;
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (stompClient != null) stompClient.disconnect();
-    }
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder().url(url).build();
 
-    private void loadHistory() {
-        Request req = new Request.Builder().url(SERVER_HTTP_HISTORY+preferences.getString("chatId","3")).build();
-        httpClient.newCall(req).enqueue(new Callback() {
+        client.newCall(request).enqueue(new Callback() {
             @Override
-            public void onFailure(Call call, IOException e) {
-                Log.e("MainActivity", "history fail", e);
-            }
+            public void onFailure(Call call, IOException e) {}
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                if (!response.isSuccessful()) {
-                    Log.e("MainActivity", "history not successful: " + response.code());
-                    return;
-                }
-                ResponseBody bodyObj = response.body();
-                if (bodyObj == null) return;
+                if (response.isSuccessful()) {
+                    Gson gson = new Gson();
+                    Type type = new TypeToken<List<ChatModel>>(){}.getType();
+                    List<ChatModel> result =
+                            gson.fromJson(response.body().string(), type);
 
-                String body = bodyObj.string();
-                Type listType = new TypeToken<List<ChatMessage>>() {}.getType();
-                final List<ChatMessage> list;
-                try {
-                    list = gson.fromJson(body, listType);
-                } catch (Exception ex) {
-                    Log.e("MainActivity", "JSON parse error", ex);
-                    return;
+                    runOnUiThread(() -> {
+                        chats.clear();
+                        chats.addAll(result);
+                        adapter.notifyDataSetChanged();
+                    });
                 }
-                if (list == null) return;
-
-                runOnUiThread(() -> adapter.setAll(list));
             }
         });
+    }
+
+    private void openChat(ChatModel chat) {
+        Intent i = new Intent(this, TaskActivity.class);
+        preferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("chatLogin", chat.getChatLogin());
+        editor.apply();
+
+        startActivity(i);
+        finish();
     }
 }

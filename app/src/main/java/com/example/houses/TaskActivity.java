@@ -1,7 +1,6 @@
 package com.example.houses;
 
 
-import static com.google.android.material.internal.ViewUtils.hideKeyboard;
 
 import android.content.Context;
 import android.content.Intent;
@@ -14,6 +13,8 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -49,7 +50,8 @@ public class TaskActivity extends AppCompatActivity {
 
     private EditText editTitle, editDesc,editMoney;
     private Button btnCreate;
-    private Button button_rec;
+    private TextView text;
+    private Button button_menu,button_chat;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +62,7 @@ public class TaskActivity extends AppCompatActivity {
         setContentView(R.layout.activity_task); // создадим пример разметки ниже
 
         preferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
-        String chatId = preferences.getString("chatId", "1");
+        String chatLogin = preferences.getString("chatLogin", "1");
         View root = findViewById(R.id.rootLayout);
         RecyclerView rv = findViewById(R.id.recyclerTasks);
         rv.setLayoutManager(new LinearLayoutManager(this));
@@ -71,17 +73,24 @@ public class TaskActivity extends AppCompatActivity {
         editDesc = findViewById(R.id.editTaskDesc);
         editMoney = findViewById(R.id.editTaskMoney);
         btnCreate = findViewById(R.id.btnCreateTask);
-        button_rec = findViewById(R.id.button_rec);
+        button_chat = findViewById(R.id.button_chat);
+        button_menu = findViewById(R.id.button_menu);
+        text = findViewById(R.id.textView);
+        text.setText(chatLogin);
 
-        button_rec.setOnClickListener(v -> {
+        button_menu.setOnClickListener(v -> {
             Intent intent = new Intent(this, MainActivity.class);
+            startActivity(intent);
+        });
+        button_chat.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ChatMassageActivity.class);
             startActivity(intent);
         });
 
 
         httpClient = new OkHttpClient();
 
-        loadTasks(chatId);
+        loadTasks(chatLogin);
         rv.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(@NonNull RecyclerView rv, int newState) {
@@ -100,7 +109,8 @@ public class TaskActivity extends AppCompatActivity {
             @Override
             public void onConnected() {
                 Log.d("TasksActivity", "WS connected");
-                stompClient.subscribeToTasks(chatId);
+                stompClient.subscribeToTasks(chatLogin);
+                //stompClient.subscribeToChat(chatLogin);
             }
 
             @Override
@@ -126,11 +136,26 @@ public class TaskActivity extends AppCompatActivity {
         btnCreate.setOnClickListener((View v) -> {
             String t = editTitle.getText().toString().trim();
             String d = editDesc.getText().toString().trim();
-            int m = Integer.parseInt(editMoney.getText().toString().trim());
-            if (t.isEmpty()) return;
+            String money = editMoney.getText().toString().trim();
+
+            if (t.isEmpty() || money.isEmpty()) {
+                Toast.makeText(this, "Fill all fields", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            int m;
+            try {
+                m = Integer.parseInt(money);
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, "Money must be a number", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+
+
 
             Task newTask = new Task();
-            newTask.setChatId(chatId);
+            newTask.setChatLogin(chatLogin);
             newTask.setTitle(t);
             newTask.setDescription(d);
             newTask.setMoney(m);
@@ -138,7 +163,7 @@ public class TaskActivity extends AppCompatActivity {
             newTask.setCompleted(false);
 
             // отправляем через STOMP -> backend @MessageMapping("/tasks/{chatId}/create")
-            stompClient.sendTask(chatId, newTask);
+            stompClient.sendTask(chatLogin, newTask);
 
             editTitle.setText("");
             editDesc.setText("");

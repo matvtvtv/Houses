@@ -7,7 +7,7 @@ public class ChatMessage {
     private Long id;
     private String sender;
     private String content;
-    private String chatId;
+    private String chatLogin;
 
     private String timestamp; // сервер отдаёт LocalDateTime; мы принимаем как String
 

@@ -26,7 +26,7 @@ public class StompClient {
     private final Context context;
 
     private static final String TAG = "StompClient";
-    private final String serverUrl = "wss://t7lvb7zl-8080.euw.devtunnels.ms/chat";
+    private final String serverUrl = "ws://t7lvb7zl-8080.euw.devtunnels.ms/chat";
 
     private SharedPreferences preferences;
     private final OkHttpClient client;
@@ -120,9 +120,8 @@ public class StompClient {
                     preferences = context.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
                     connected = true;
                     postConnected();
-                    subscribeToChat(preferences.getString("chatId", "1"));
-                    subscribeToTasks(preferences.getString("chatId", "1")); // если нужен авто-подписка на задачи
                     break;
+
 
                 case "MESSAGE":
                     // headers и body разделены пустой строкой "\n\n"
@@ -211,12 +210,12 @@ public class StompClient {
         ws.send(frame);
     }
 
-    public void subscribeToChat(String chatId) {
-        subscribe("/topic/chat/" + chatId);
+    public void subscribeToChat(String chatLogin) {
+        subscribe("/topic/chat/" + chatLogin);
     }
 
-    public void subscribeToTasks(String chatId) {
-        subscribe("/topic/tasks/" + chatId);
+    public void subscribeToTasks(String chatLogin) {
+        subscribe("/topic/tasks/" + chatLogin);
     }
 
     public void send(String destination, Object payload) {
@@ -230,8 +229,8 @@ public class StompClient {
     }
 
     // convenience for tasks
-    public void sendTask(String chatId, Object taskPayload) {
-        send("/app/tasks/" + chatId + "/create", taskPayload);
+    public void sendTask( String chatLogin, Object taskPayload) {
+        send("/app/tasks/" + chatLogin + "/create", taskPayload);
     }
 
     public void disconnect() {

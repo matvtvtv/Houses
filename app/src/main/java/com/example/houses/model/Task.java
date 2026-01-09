@@ -5,11 +5,15 @@ import lombok.Data;
 @Data
 public class Task {
     private Long id;
-    private String chatId;
+
+    private String chatLogin;
+    private String userLogin;
     private String title;
     private String description;
-    private boolean completed;
     private int money;
+
+    private boolean execution;
+    private boolean completed;
 
     private String createdAt;
 }
