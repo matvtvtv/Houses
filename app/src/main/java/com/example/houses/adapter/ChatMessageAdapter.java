@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -74,17 +75,24 @@ public class ChatMessageAdapter extends RecyclerView.Adapter<ChatMessageAdapter.
         ChatMessage m = items.get(position);
         holder.tv.setText(m.getSender() + ": " + m.getContent());
 
+        if (m.getImage() != null && !m.getImage().isEmpty()) {
+            try {
+                byte[] decodedBytes = Base64.decode(m.getImage(), Base64.DEFAULT);
+                Bitmap bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
+                holder.imgAvatar.setImageBitmap(bitmap);
+                return;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
-        byte[] avatarBytes = DatabaseHelper.getInstance(holder.itemView.getContext())
+        byte[] avatarBytes = DatabaseHelper
+                .getInstance(holder.itemView.getContext())
                 .getUserAvatar(m.getSender());
 
-        if (avatarBytes != null) {
-            try {
-                Bitmap bitmap = BitmapFactory.decodeByteArray(avatarBytes, 0, avatarBytes.length);
-                holder.imgAvatar.setImageBitmap(bitmap);
-            } catch (Exception e) {
-                holder.imgAvatar.setImageResource(R.drawable.ic_avatar_placeholder);
-            }
+        if (avatarBytes != null && avatarBytes.length > 0) {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(avatarBytes, 0, avatarBytes.length);
+            holder.imgAvatar.setImageBitmap(bitmap);
         } else {
             holder.imgAvatar.setImageResource(R.drawable.ic_avatar_placeholder);
         }

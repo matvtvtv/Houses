@@ -22,6 +22,7 @@ import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -58,7 +59,6 @@ public class ChatMassageActivity extends AppCompatActivity {
         rv.setLayoutManager(new LinearLayoutManager(this));
         String login = preferences.getString("login", "account");
         String chatLogin = preferences.getString("chatLogin", "1");
-        String image  = preferences.getString("avatar_path", "1");
         adapter = new ChatMessageAdapter(login);
         rv.setAdapter(adapter);
 
@@ -75,8 +75,11 @@ public class ChatMassageActivity extends AppCompatActivity {
         });
 
 
-        httpClient = new OkHttpClient();
-
+        httpClient= new OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .writeTimeout(10, TimeUnit.SECONDS)
+                .build();
         loadHistory();
 
         stompClient = new StompClient(this);
@@ -84,7 +87,7 @@ public class ChatMassageActivity extends AppCompatActivity {
         stompClient.setListener(new StompClient.StompListener() {
             @Override
             public void onConnected() {
-                Log.d("ChatActivity", "STOMP connected");
+                Log.d("ChatMassageActivity", "STOMP connected");
                 stompClient.subscribeToChat(chatLogin);
 
                 runOnUiThread(() -> btnSend.setEnabled(true));
@@ -101,12 +104,12 @@ public class ChatMassageActivity extends AppCompatActivity {
 
             @Override
             public void onTask(com.example.houses.model.Task task) {
-                // MainActivity не работает с задачами — игнорируем
+
             }
 
             @Override
             public void onError(String reason) {
-                Log.e("MainActivity", "STOMP error: " + reason);
+                Log.e("ChatMassageActivity", "STOMP error: " + reason);
             }
         });
 
@@ -117,11 +120,12 @@ public class ChatMassageActivity extends AppCompatActivity {
             if (text.isEmpty()) return;
 
             byte[] avatarBytes = DatabaseHelper.getInstance(this).getUserAvatar(login);
+
             String avatarBase64 = null;
             if (avatarBytes != null) {
                 avatarBase64 = android.util.Base64.encodeToString(avatarBytes, android.util.Base64.DEFAULT);
             }
-
+            Log.e("ChatMassageActivity", "S: " + avatarBase64);
 
             StompClient.MessageDTO payload = new StompClient.MessageDTO(login, text, avatarBase64);
             stompClient.send("/app/chat/" + preferences.getString("chatLogin","") + "/send", payload);
@@ -141,13 +145,13 @@ public class ChatMassageActivity extends AppCompatActivity {
         httpClient.newCall(req).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                Log.e("MainActivity", "history fail", e);
+                Log.e("ChatMassageActivity", "history fail", e);
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 if (!response.isSuccessful()) {
-                    Log.e("MainActivity", "history not successful: " + response.code());
+                    Log.e("ChatMassageActivity", "history not successful: " + response.code());
                     return;
                 }
                 ResponseBody bodyObj = response.body();
@@ -156,16 +160,18 @@ public class ChatMassageActivity extends AppCompatActivity {
                 String body = bodyObj.string();
                 Type listType = new TypeToken<List<ChatMessage>>() {}.getType();
                 final List<ChatMessage> list;
+
                 try {
                     list = gson.fromJson(body, listType);
                 } catch (Exception ex) {
-                    Log.e("MainActivity", "JSON parse error", ex);
+                    Log.e("ChatMassageActivity", "JSON parse error", ex);
                     return;
                 }
                 if (list == null) return;
-
+                Log.e("ChatMassageActivity", list.get(1).getImage());
                 runOnUiThread(() -> adapter.setAll(list));
             }
         });
     }
+
 }

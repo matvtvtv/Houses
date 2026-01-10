@@ -26,7 +26,7 @@ public class StompClient {
     private final Context context;
 
     private static final String TAG = "StompClient";
-    private final String serverUrl = "ws://t7lvb7zl-8080.euw.devtunnels.ms/chat";
+    private final String serverUrl = "wss://t7lvb7zl-8080.euw.devtunnels.ms/chat";
 
     private SharedPreferences preferences;
     private final OkHttpClient client;

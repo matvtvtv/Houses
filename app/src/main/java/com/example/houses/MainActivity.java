@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import okhttp3.Call;       // <- правильный
 
@@ -71,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         fabCreate.setOnClickListener(v -> {
-            if(role=="PARENT"){
+            if(Objects.equals(role, "PARENT")){
             startActivity(new Intent(this, CreateChatActivity.class));
             finish();}
             else {

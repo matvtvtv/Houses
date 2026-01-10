@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioGroup;
@@ -36,6 +37,7 @@ public class RegistrationActivity extends AppCompatActivity {
 
     private static final String BASE_URL ="https://t7lvb7zl-8080.euw.devtunnels.ms/api/user/register";
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -48,7 +50,9 @@ public class RegistrationActivity extends AppCompatActivity {
 
         rgRole = findViewById(R.id.rgRole);
 
+
         btnRegister.setOnClickListener(v -> register());
+
     }
 
     private void register() {
@@ -76,13 +80,13 @@ public class RegistrationActivity extends AppCompatActivity {
             role = "CHILD";
         }
 
-        RegisterRequest dto = new RegisterRequest(login,name, password, role);
+        RegisterRequest dto = new RegisterRequest(login, name, password, role);
 
         String json = gson.toJson(dto);
 
         RequestBody body = RequestBody.create(
                 json,
-                MediaType.parse("application/json")
+                MediaType.parse("application/json; charset=utf-8")
         );
 
         Request request = new Request.Builder()
@@ -97,14 +101,14 @@ public class RegistrationActivity extends AppCompatActivity {
                         Toast.makeText(RegistrationActivity.this,
                                 "Server error: " + e.getMessage(),
                                 Toast.LENGTH_LONG).show());
+                Log.v("RedistationActivity", e.getMessage());
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 if (response.isSuccessful()) {
 
-                    SharedPreferences prefs =
-                            getSharedPreferences("AppPrefs", MODE_PRIVATE);
+                    SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
                     prefs.edit()
                             .putString("login", login)
                             .putString("role", role)
@@ -112,7 +116,10 @@ public class RegistrationActivity extends AppCompatActivity {
 
                     runOnUiThread(() -> {
                         Toast.makeText(RegistrationActivity.this,
-                                "Registration successful",
+                                "Registration successful " ,
+                                Toast.LENGTH_SHORT).show();
+                        Toast.makeText(RegistrationActivity.this,
+                                role,
                                 Toast.LENGTH_SHORT).show();
 
                         startActivity(new Intent(
