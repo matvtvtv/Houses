@@ -34,8 +34,7 @@ public class RegistrationActivity extends AppCompatActivity {
     private final OkHttpClient client = new OkHttpClient();
     private final Gson gson = new Gson();
 
-    private static final String BASE_URL =
-            "https://t7lvb7zl-8080.euw.devtunnels.ms/api/user/register";
+    private static final String BASE_URL ="https://t7lvb7zl-8080.euw.devtunnels.ms/api/user/register";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -24,7 +24,7 @@ import okhttp3.Response;
 public class JoinChatActivity extends AppCompatActivity {
 
     private EditText etChatLogin;
-    private Button btnJoin;
+    private Button btnJoin , button;
 
     private String userLogin;
 
@@ -35,11 +35,16 @@ public class JoinChatActivity extends AppCompatActivity {
 
         etChatLogin = findViewById(R.id.etChatLogin);
         btnJoin = findViewById(R.id.btnJoin);
+        button = findViewById(R.id.button);
 
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         userLogin = prefs.getString("login", "");
 
         btnJoin.setOnClickListener(v -> joinChat());
+        button.setOnClickListener(v -> {startActivity(new Intent(JoinChatActivity.this, MainActivity.class));
+                    finish();
+        }
+        );
     }
 
     private void joinChat() {

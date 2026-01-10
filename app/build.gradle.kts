@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.convertergson)
     implementation(libs.flexbox)
+    implementation("de.hdodenhof:circleimageview:3.1.0")
     annotationProcessor(libs.lombok)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

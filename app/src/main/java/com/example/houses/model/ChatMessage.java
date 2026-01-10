@@ -8,7 +8,7 @@ public class ChatMessage {
     private String sender;
     private String content;
     private String chatLogin;
-
+    private String image;
     private String timestamp; // сервер отдаёт LocalDateTime; мы принимаем как String
 
 

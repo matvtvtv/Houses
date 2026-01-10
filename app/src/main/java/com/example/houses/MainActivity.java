@@ -81,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
         });
         button.setOnClickListener(v -> {
 
-                startActivity(new Intent(this, RegistrationActivity.class));
+                startActivity(new Intent(this, SettingsActivity.class));
                 finish();
 
         });

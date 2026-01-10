@@ -77,6 +77,9 @@ public class StompClient {
                                 "heart-beat:10000,10000\n\n" +
                                 "\u0000";
                 webSocket.send(connect);
+
+
+
             }
 
             @Override
@@ -245,10 +248,13 @@ public class StompClient {
     public static class MessageDTO {
         public String sender;
         public String content;
+        public String image;
 
-        public MessageDTO(String sender, String content) {
+        public MessageDTO(String sender, String content, String image) {
             this.sender = sender;
             this.content = content;
+            this.image = image;
+
         }
     }
 }

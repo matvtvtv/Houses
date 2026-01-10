@@ -52,6 +52,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
     static class ChatViewHolder extends RecyclerView.ViewHolder {
         TextView tvChatName, tvRole;
 
+
         public ChatViewHolder(@NonNull View itemView) {
             super(itemView);
             tvChatName = itemView.findViewById(R.id.tvChatName);

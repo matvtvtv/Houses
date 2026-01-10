@@ -1,30 +1,38 @@
-<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingStart="8dp"
-    android:paddingEnd="8dp"
-    android:paddingTop="6dp"
-    android:paddingBottom="6dp">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:padding="6dp">
 
     <androidx.cardview.widget.CardView
-        android:id="@+id/my_card"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
         app:cardCornerRadius="20dp"
         app:cardBackgroundColor="#6C81CE">
 
-        <TextView
-            android:id="@+id/tvMessage"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:padding="10dp"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
-            />
+            android:gravity="center_vertical">
+
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/imgAvatar"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+
+                android:src="@drawable/ic_avatar_placeholder"/>
+
+            <TextView
+                android:id="@+id/tvMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"/>
+        </LinearLayout>
 
     </androidx.cardview.widget.CardView>
 

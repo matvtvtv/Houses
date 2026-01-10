@@ -26,8 +26,7 @@ public class CreateChatActivity extends AppCompatActivity {
     private EditText editChatLogin, editChatName;
     private Button btnCreate;
 
-    private static final String URL =
-            "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chats_data/register";
+    private static final String URL = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chats_data/register";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.houses.DB.DatabaseHelper;
 import com.example.houses.adapter.ChatMessageAdapter;
 import com.example.houses.model.ChatMessage;
 import com.example.houses.webSocket.StompClient;
@@ -57,7 +58,7 @@ public class ChatMassageActivity extends AppCompatActivity {
         rv.setLayoutManager(new LinearLayoutManager(this));
         String login = preferences.getString("login", "account");
         String chatLogin = preferences.getString("chatLogin", "1");
-
+        String image  = preferences.getString("avatar_path", "1");
         adapter = new ChatMessageAdapter(login);
         rv.setAdapter(adapter);
 
@@ -111,17 +112,22 @@ public class ChatMassageActivity extends AppCompatActivity {
 
         stompClient.connect();
 
-        btnSend.setOnClickListener((View v) -> {
+        btnSend.setOnClickListener(v -> {
             String text = editMessage.getText().toString().trim();
             if (text.isEmpty()) return;
 
-            StompClient.MessageDTO payload = new StompClient.MessageDTO(login, text);
-            stompClient.send(
-                    "/app/chat/" + preferences.getString("chatLogin","") + "/send",
-                    new StompClient.MessageDTO(login ,text )
-            );
+            byte[] avatarBytes = DatabaseHelper.getInstance(this).getUserAvatar(login);
+            String avatarBase64 = null;
+            if (avatarBytes != null) {
+                avatarBase64 = android.util.Base64.encodeToString(avatarBytes, android.util.Base64.DEFAULT);
+            }
+
+
+            StompClient.MessageDTO payload = new StompClient.MessageDTO(login, text, avatarBase64);
+            stompClient.send("/app/chat/" + preferences.getString("chatLogin","") + "/send", payload);
             editMessage.setText("");
         });
+
     }
 
     @Override
