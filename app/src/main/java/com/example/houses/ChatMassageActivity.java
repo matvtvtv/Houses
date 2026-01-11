@@ -168,7 +168,6 @@ public class ChatMassageActivity extends AppCompatActivity {
                     return;
                 }
                 if (list == null) return;
-                Log.e("ChatMassageActivity", list.get(1).getImage());
                 runOnUiThread(() -> adapter.setAll(list));
             }
         });

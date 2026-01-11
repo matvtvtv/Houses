@@ -29,6 +29,7 @@ android:fitsSystemWindows="true">
             android:id="@+id/btnEnterance"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:backgroundTint="@color/light_blue"
             android:layout_marginTop="20dp"
             android:text="Enterance" />
 
@@ -36,6 +37,8 @@ android:fitsSystemWindows="true">
             android:id="@+id/btnRegister"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:backgroundTint="@color/light_green"
+
             android:layout_marginTop="20dp"
             android:text="Register" />
     </LinearLayout>
