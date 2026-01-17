@@ -1,130 +1,104 @@
 package com.example.houses;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
+import android.view.inputmethod.InputMethodManager;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
-import com.example.houses.adapter.ChatAdapter;
-import com.example.houses.model.ChatModel;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
-import okhttp3.Call;       // <- правильный
-
-import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import com.example.houses.adapter.ViewPagerAdapter;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
-    private SharedPreferences preferences;
-    RecyclerView rvChats;
-    FloatingActionButton fabCreate;
-    Button button;
-    ChatAdapter adapter;
-    List<ChatModel> chats = new ArrayList<>();
 
-    String login;
-    String role;
+    private ViewPager2 viewPager;
+    private BottomNavigationView bottomNav;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        preferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        SharedPreferences preferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
 
         boolean isFirstRun = preferences.getBoolean("isFirstRun", true);
-        if (isFirstRun) { startActivity(new Intent(this, RegistrationActivity.class));
+        if (isFirstRun) {
+            startActivity(new Intent(this, RegistrationActivity.class));
             editor.putBoolean("isFirstRun", false);
             editor.apply();
         }
-        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
-        login = prefs.getString("login", "");
-        role = prefs.getString("role", "");
 
+        viewPager = findViewById(R.id.viewPager);
+        bottomNav = findViewById(R.id.bottomNavigation);
 
-        rvChats = findViewById(R.id.rvChats);
-        fabCreate = findViewById(R.id.fabCreateChat);
-        button = findViewById(R.id.button);
+        ViewPagerAdapter adapter = new ViewPagerAdapter(this);
+        viewPager.setAdapter(adapter);
+        viewPager.setOffscreenPageLimit(3);
 
-        rvChats.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new ChatAdapter(chats, chat -> openChat(chat));
-        rvChats.setAdapter(adapter);
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
 
-
-
-        fabCreate.setOnClickListener(v -> {
-            if(Objects.equals(role, "PARENT")){
-            startActivity(new Intent(this, CreateChatActivity.class));
-            finish();}
-            else {
-                startActivity(new Intent(this, JoinChatActivity.class));
-                finish();
+            if (id == R.id.nav_tasks) {
+                viewPager.setCurrentItem(0, false);
+                return true;
+            } else if (id == R.id.nav_chat) {
+                viewPager.setCurrentItem(1, false);
+                return true;
+            } else if (id == R.id.nav_settings) {
+                viewPager.setCurrentItem(2, false);
+                return true;
             }
+
+            return false;
         });
-        button.setOnClickListener(v -> {
 
-                startActivity(new Intent(this, SettingsActivity.class));
-                finish();
+        // ЕДИНСТВЕННОЕ место, где скрывается клавиатура
+        viewPager.registerOnPageChangeCallback(
+                new ViewPager2.OnPageChangeCallback() {
+                    @Override
+                    public void onPageSelected(int position) {
+                        hideKeyboard();
 
-        });
-        loadChats();
-        editor.apply();
-    }
-    private void loadChats() {
-        String url = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chats_data/get_chats/" + login;
-
-        OkHttpClient client = new OkHttpClient();
-        Request request = new Request.Builder().url(url).build();
-
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {}
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                if (response.isSuccessful()) {
-                    Gson gson = new Gson();
-                    Type type = new TypeToken<List<ChatModel>>(){}.getType();
-                    List<ChatModel> result =
-                            gson.fromJson(response.body().string(), type);
-
-                    runOnUiThread(() -> {
-                        chats.clear();
-                        chats.addAll(result);
-                        adapter.notifyDataSetChanged();
-                    });
+                        switch (position) {
+                            case 0:
+                                bottomNav.setSelectedItemId(R.id.nav_tasks);
+                                break;
+                            case 1:
+                                bottomNav.setSelectedItemId(R.id.nav_chat);
+                                break;
+                            case 2:
+                                bottomNav.setSelectedItemId(R.id.nav_settings);
+                                break;
+                        }
+                    }
                 }
-            }
-        });
+        );
     }
 
-    private void openChat(ChatModel chat) {
-        Intent i = new Intent(this, TaskActivity.class);
-        preferences = getSharedPreferences("AppPrefs", MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString("chatLogin", chat.getChatLogin());
-        editor.apply();
-
-        startActivity(i);
-        finish();
+    public ViewPager2 getViewPager() {
+        return viewPager;
     }
+
+    private void hideKeyboard() {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        View current = getCurrentFocus();
+
+        if (imm == null) return;
+
+        if (current != null) {
+            // скрыть и снять фокус с текущего view
+            imm.hideSoftInputFromWindow(current.getWindowToken(), 0);
+            current.clearFocus();
+        } else {
+            // если нет фокусного view — использовать декор окна (гарантия)
+            View decor = getWindow().getDecorView();
+            imm.hideSoftInputFromWindow(decor.getWindowToken(), 0);
+        }
+    }
+
 }

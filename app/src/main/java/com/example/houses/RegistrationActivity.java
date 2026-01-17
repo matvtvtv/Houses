@@ -128,11 +128,13 @@ public class RegistrationActivity extends AppCompatActivity {
                         Toast.makeText(RegistrationActivity.this,
                                 role,
                                 Toast.LENGTH_SHORT).show();
+                            if (role.equals("PARENT")){
+                                startActivity(new Intent(RegistrationActivity.this, CreateChatActivity.class));
+                            }
+                            else{
+                                startActivity(new Intent(RegistrationActivity.this, JoinChatActivity.class));
+                            }
 
-                        startActivity(new Intent(
-                                RegistrationActivity.this,
-                                MainActivity.class
-                        ));
                         finish();
                     });
 

@@ -7,14 +7,6 @@
     android:padding="24dp"
     android:fitsSystemWindows="true">
 
-    <!-- Test button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/button4"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Menu"
-        app:backgroundTint="@color/light_blue"
-        android:textColor="@android:color/white"/>
 
     <!-- Chat login -->
     <com.google.android.material.textfield.TextInputEditText

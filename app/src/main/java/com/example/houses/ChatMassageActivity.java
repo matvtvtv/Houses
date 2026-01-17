@@ -44,7 +44,7 @@ public class ChatMassageActivity extends AppCompatActivity {
 
     private EditText editMessage;
     private Button btnSend;
-    private Button button_task, buttonReg;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,15 +64,12 @@ public class ChatMassageActivity extends AppCompatActivity {
 
         editMessage = findViewById(R.id.editMessage);
         btnSend = findViewById(R.id.btnSend);
-        button_task = findViewById(R.id.button_task);
+
 
 
 
         btnSend.setEnabled(false); // запрещаем до подключения STOMP
-        button_task.setOnClickListener(v -> {
-            Intent intent = new Intent(this, TaskActivity.class);
-            startActivity(intent);
-        });
+
 
 
         httpClient= new OkHttpClient.Builder()

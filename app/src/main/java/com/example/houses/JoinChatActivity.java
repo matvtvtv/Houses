@@ -35,20 +35,22 @@ public class JoinChatActivity extends AppCompatActivity {
 
         etChatLogin = findViewById(R.id.etChatLogin);
         btnJoin = findViewById(R.id.btnJoin);
-        button = findViewById(R.id.button);
+
 
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         userLogin = prefs.getString("login", "");
 
         btnJoin.setOnClickListener(v -> joinChat());
-        button.setOnClickListener(v -> {startActivity(new Intent(JoinChatActivity.this, MainActivity.class));
-                    finish();
-        }
-        );
+
+
     }
 
     private void joinChat() {
+
         String chatLogin = etChatLogin.getText().toString().trim();
+
+
+
 
         if (chatLogin.isEmpty()) {
             Toast.makeText(this, "Enter chat login", Toast.LENGTH_SHORT).show();
@@ -90,7 +92,12 @@ public class JoinChatActivity extends AppCompatActivity {
                                     "Joined successfully",
                                     Toast.LENGTH_SHORT
                             ).show();
+                            SharedPreferences prefs =
+                                    getSharedPreferences("AppPrefs", MODE_PRIVATE);
 
+                            prefs.edit()
+                                    .putString("chatLogin", chatLogin)
+                                    .apply();
                             startActivity(new Intent(
                                     JoinChatActivity.this,
                                     MainActivity.class
