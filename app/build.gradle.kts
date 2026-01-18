@@ -68,4 +68,23 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    implementation(libs.appcompat)
+    implementation(libs.material)
+    implementation(libs.activity)
+    implementation(libs.constraintlayout)
+    implementation(libs.lombok)
+    implementation(libs.flexbox)
+    implementation(libs.work)
+    implementation(libs.okhttp)
+    implementation(libs.retrofit)
+
+    // Lombok
+    annotationProcessor(libs.lombok)
+
+    // JUnit для юнит-тестов
+    testImplementation(libs.junit)
+
+    // Android Instrumented Tests
+    androidTestImplementation(libs.ext.junit)
+    androidTestImplementation(libs.espresso.core)
 }

@@ -59,7 +59,7 @@ public class SettingsFragment extends Fragment {
         imgAvatar = view.findViewById(R.id.imgAvatar);
         btnChoose = view.findViewById(R.id.btnChooseAvatar);
 
-        button3 = view.findViewById(R.id.button3);
+        button3 = view.findViewById(R.id.btnLogout);
 
         loadAvatar();
 

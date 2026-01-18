@@ -3,17 +3,17 @@
 
     <item
         android:id="@+id/nav_tasks"
-
+        android:icon="@drawable/task_list_svgrepo_com"
         android:title="Задачи"/>
 
     <item
         android:id="@+id/nav_chat"
-
+        android:icon="@drawable/vector"
         android:title="Чат"/>
 
     <item
         android:id="@+id/nav_settings"
-
+        android:icon="@drawable/settings_svgrepo_com"
         android:title="Настройки"/>
 
 </menu>

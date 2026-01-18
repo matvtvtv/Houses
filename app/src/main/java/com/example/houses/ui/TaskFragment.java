@@ -14,6 +14,7 @@ import android.view.ViewParent;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -60,7 +61,7 @@ public class TaskFragment extends Fragment {
     private Gson gson = new Gson();
 
     private EditText editTitle, editDesc, editMoney;
-    private Button btnCreate;
+    private ImageView btnCreate;
     private TextView text;
 
     private View rootView;
@@ -160,7 +161,7 @@ public class TaskFragment extends Fragment {
         btnCreate = view.findViewById(R.id.btnCreateTask);
 
         text = view.findViewById(R.id.textView);
-        text.setText(chatLogin);
+        text.setText("логин группы: "+chatLogin);
 
         // --- hide keyboard on outside touch ---
         rootView.setOnTouchListener((v, event) -> {

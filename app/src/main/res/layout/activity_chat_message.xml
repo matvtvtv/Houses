@@ -11,48 +11,53 @@
     android:focusable="true"
     android:fitsSystemWindows="true">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+    <!-- RecyclerView для сообщений -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerMessages"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:padding="8dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/laySend"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Поле ввода и кнопка Send -->
+    <LinearLayout
+        android:id="@+id/laySend"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerMessages"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:padding="8dp"
-            app:layout_constraintBottom_toTopOf="@+id/laySend"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <LinearLayout
-            android:id="@+id/laySend"
+        <androidx.cardview.widget.CardView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="8dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+            android:layout_weight="1"
+            app:cardBackgroundColor="#E0DADA"
+            app:cardCornerRadius="20dp">
 
             <EditText
                 android:id="@+id/editMessage"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Type a message" />
+                android:padding="10dp"
+                android:hint="Type a message"
+                android:background="@android:color/transparent"
+                android:inputType="text" />
+        </androidx.cardview.widget.CardView>
 
-            <Button
-                android:id="@+id/btnSend"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:backgroundTint="@color/light_blue"
+        <Button
+            android:id="@+id/btnSend"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:backgroundTint="@color/light_blue"
+            android:text="Send" />
 
-                android:text="Send"/>
-        </LinearLayout>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
