@@ -1,8 +1,11 @@
 package com.example.houses;
 
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.core.widget.CompoundButtonCompat;
 
 
 import android.content.Intent;
@@ -10,6 +13,7 @@ import android.content.SharedPreferences;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
 
@@ -50,7 +54,9 @@ public class RegistrationActivity extends AppCompatActivity {
         btnEnterance = findViewById(R.id.btnEnterance);
 
         rgRole = findViewById(R.id.rgRole);
-
+        RadioButton rb = findViewById(R.id.rbParent);
+        ColorStateList csl = AppCompatResources.getColorStateList(this, R.color.radio_button_tint);
+        CompoundButtonCompat.setButtonTintList(rb, csl);
 
         btnRegister.setOnClickListener(v -> register());
         btnEnterance.setOnClickListener(v -> {

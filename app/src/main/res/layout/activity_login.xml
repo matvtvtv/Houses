@@ -1,49 +1,70 @@
-<LinearLayout android:id="@+id/main"
-android:layout_width="match_parent"
-android:layout_height="match_parent"
-android:orientation="vertical"
-android:padding="24dp"
-    android:background="@color/light_grey"
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp"
+    android:background="@drawable/iphone_16_pro___1"
 
-    xmlns:android="http://schemas.android.com/apk/res/android"
-android:fitsSystemWindows="true">
+    android:fitsSystemWindows="true">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
+        <!-- LOGIN -->
         <EditText
             android:id="@+id/etLogin"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Login" />
+            android:hint="Login"
+            android:textColor="@android:color/white"
+            android:textColorHint="@android:color/white"
+            android:background="@drawable/edit_text_underline"
+            android:padding="14dp"
+            android:textCursorDrawable="@null"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp"/>
 
+        <!-- PASSWORD -->
         <EditText
             android:id="@+id/etPassword"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Password"
-            android:inputType="textPassword" />
+            android:textCursorDrawable="@null"
+            android:inputType="textPassword"
+            android:textColor="@android:color/white"
+            android:textColorHint="@android:color/white"
+            android:background="@drawable/edit_text_underline"
+            android:padding="14dp"
+            android:textSize="16sp"
+            android:layout_marginBottom="24dp"/>
 
-        <Button
+        <!-- ENTER BUTTON -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnEnterance"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:backgroundTint="@color/light_blue"
-            android:layout_marginTop="20dp"
-            android:text="Enterance" />
+            android:layout_height="48dp"
+            android:text="Enterance"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:layout_marginBottom="16dp"
+            app:cornerRadius="12dp"
+            app:backgroundTint="@color/light_blue"/>
 
-        <Button
+        <!-- REGISTER BUTTON -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRegister"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:backgroundTint="@color/light_green"
+            android:layout_height="48dp"
+            android:text="Register"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            app:cornerRadius="12dp"
+            app:backgroundTint="@color/light_green"/>
 
-            android:layout_marginTop="20dp"
-            android:text="Register" />
     </LinearLayout>
-
-
-</LinearLayout>
+</ScrollView>

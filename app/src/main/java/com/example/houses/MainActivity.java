@@ -49,10 +49,13 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = preferences.edit();
 
         boolean isFirstRun = preferences.getBoolean("isFirstRun", true);
+        String login = preferences.getString("login", "1");
         if (isFirstRun) {
             startActivity(new Intent(this, RegistrationActivity.class));
             editor.putBoolean("isFirstRun", false);
             editor.apply();
+        } else if (login.equals("1")) {
+            startActivity(new Intent(this, RegistrationActivity.class));
         }
 
         viewPager = findViewById(R.id.viewPager);

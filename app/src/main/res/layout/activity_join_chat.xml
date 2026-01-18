@@ -1,26 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:padding="24dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/light_grey"
+    android:background="@drawable/iphone_16_pro___1"
+
     android:fitsSystemWindows="true">
 
-
-
+    <!-- CHAT LOGIN -->
     <EditText
         android:id="@+id/etChatLogin"
-        android:hint="Chat login"
-        android:paddingTop="20dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
-    <Button
-        android:id="@+id/btnJoin"
-        android:text="Join chat"
-        android:backgroundTint="@color/light_blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"/>
+        android:hint="Chat login"
+        android:textColor="@android:color/white"
+        android:textColorHint="@color/white"
+        android:background="@drawable/edit_text_underline"
+        android:padding="14dp"
+        android:textCursorDrawable="@null"
+        android:textSize="16sp"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- JOIN BUTTON -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnJoin"
+        android:text="Join chat"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        app:cornerRadius="12dp"
+        app:backgroundTint="@color/light_blue"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"/>
+
 </LinearLayout>

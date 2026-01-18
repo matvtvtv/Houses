@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools" >
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -17,7 +17,13 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Houses"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true" >
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize"
+            android:screenOrientation="portrait"
+            android:exported="true" />
+
         <activity
             android:name=".LoginActivity"
             android:configChanges="orientation|screenSize"
@@ -27,7 +33,7 @@
             android:name=".SettingsActivity"
             android:configChanges="orientation|screenSize"
             android:exported="false"
-            android:screenOrientation="portrait"  />
+            android:screenOrientation="portrait" />
         <activity
             android:name=".JoinChatActivity"
             android:configChanges="orientation|screenSize"
@@ -55,10 +61,10 @@
             android:screenOrientation="portrait"
             android:theme="@style/Theme.Houses" />
         <activity
-            android:name=".MainActivity"
+            android:name=".StartActivity"
             android:configChanges="orientation|screenSize"
             android:exported="true"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

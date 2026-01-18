@@ -13,6 +13,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -51,7 +52,7 @@ public class ChatMessageFragment extends Fragment {
     private Gson gson = new Gson();
 
     private EditText editMessage;
-    private Button btnSend;
+    private ImageView btnSend;
     private View rootView;
 
 

@@ -1,36 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp"
-    android:background="@color/light_grey"
-    android:fitsSystemWindows="true">
+    android:background="@drawable/iphone_16_pro___1"
+    android:padding="24dp">
 
-
-    <!-- Chat login -->
-    <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/editChatLogin"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Chat login" />
+        android:orientation="vertical">
 
-    <!-- Chat name -->
-    <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/editChatName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Chat name" />
+        <!-- CHAT LOGIN -->
+        <EditText
+            android:id="@+id/editChatLogin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Chat login"
+            android:textCursorDrawable="@null"
+            android:textColor="@android:color/white"
+            android:textColorHint="@color/white"
+            android:background="@drawable/edit_text_underline"
+            android:padding="14dp"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp"/>
 
-    <!-- Create chat button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCreateChat"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Create chat"
-        android:layout_marginTop="24dp"
-        app:backgroundTint="@color/light_blue"
-        android:textColor="@android:color/white"/>
+        <!-- CHAT NAME -->
+        <EditText
+            android:id="@+id/editChatName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Chat name"
+            android:textCursorDrawable="@null"
+            android:textColor="@android:color/white"
+            android:textColorHint="@color/white"
+            android:background="@drawable/edit_text_underline"
+            android:padding="14dp"
+            android:textSize="16sp"
+            android:layout_marginBottom="24dp"/>
 
-</LinearLayout>
+        <!-- CREATE CHAT BUTTON -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCreateChat"
+
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Create chat"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="24dp"
+            app:backgroundTint="@color/light_blue"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnJoinChat"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Join chat"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            app:cornerRadius="12dp"
+            app:backgroundTint="@color/light_blue"/>
+    </LinearLayout>
+</ScrollView>

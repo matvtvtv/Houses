@@ -36,8 +36,8 @@
         <androidx.cardview.widget.CardView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            app:cardBackgroundColor="#E0DADA"
+            android:layout_weight="19"
+            app:cardBackgroundColor="#EDEDED"
             app:cardCornerRadius="20dp">
 
             <EditText
@@ -49,15 +49,22 @@
                 android:background="@android:color/transparent"
                 android:inputType="text" />
         </androidx.cardview.widget.CardView>
-
-        <Button
-            android:id="@+id/btnSend"
+        <androidx.cardview.widget.CardView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:backgroundTint="@color/light_blue"
-            android:text="Send" />
+            android:layout_weight="1"
+            android:layout_marginLeft="10dp"
+            app:cardBackgroundColor="#EDEDED"
+            app:cardCornerRadius="20dp">
 
+            <ImageView
+                android:id="@+id/btnSend"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/send_plane_svgrepo_com"
+                android:text="Send" />
+        </androidx.cardview.widget.CardView>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

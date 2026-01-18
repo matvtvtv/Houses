@@ -24,7 +24,7 @@ import okhttp3.Response;
 public class CreateChatActivity extends AppCompatActivity {
 
     private EditText editChatLogin, editChatName;
-    private Button btnCreate,button4;
+    private Button btnCreate,btnJoinChat;
 
     private static final String URL = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chats_data/register";
 
@@ -36,10 +36,14 @@ public class CreateChatActivity extends AppCompatActivity {
         editChatLogin = findViewById(R.id.editChatLogin);
         editChatName = findViewById(R.id.editChatName);
         btnCreate = findViewById(R.id.btnCreateChat);
+        btnJoinChat = findViewById(R.id.btnJoinChat);
 
 
         btnCreate.setOnClickListener(v -> createChat());
+        btnCreate.setOnClickListener(v -> {
+            startActivity(new Intent(CreateChatActivity.this, JoinChatActivity.class));
 
+        });
     }
 
     private void createChat() {
