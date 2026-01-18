@@ -6,6 +6,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -133,4 +134,15 @@ public class NewTaskDialog extends Dialog {
             dismiss();
         });
     }
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (getWindow() != null) {
+            getWindow().setLayout(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+        }
+    }
+
 }

@@ -36,49 +36,38 @@ public class MainActivity extends AppCompatActivity {
         viewPager = findViewById(R.id.viewPager);
         bottomNav = findViewById(R.id.bottomNavigation);
 
-        ViewPagerAdapter adapter = new ViewPagerAdapter(this);
-        viewPager.setAdapter(adapter);
+        viewPager.setAdapter(new ViewPagerAdapter(this));
         viewPager.setOffscreenPageLimit(3);
 
         bottomNav.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-
-            if (id == R.id.nav_tasks) {
+            if (item.getItemId() == R.id.nav_tasks) {
                 viewPager.setCurrentItem(0, false);
                 return true;
-            } else if (id == R.id.nav_chat) {
+            }
+            if (item.getItemId() == R.id.nav_chat) {
                 viewPager.setCurrentItem(1, false);
                 return true;
-            } else if (id == R.id.nav_settings) {
+            }
+            if (item.getItemId() == R.id.nav_settings) {
                 viewPager.setCurrentItem(2, false);
                 return true;
             }
-
             return false;
         });
 
-        // ЕДИНСТВЕННОЕ место, где скрывается клавиатура
         viewPager.registerOnPageChangeCallback(
                 new ViewPager2.OnPageChangeCallback() {
                     @Override
                     public void onPageSelected(int position) {
                         hideKeyboard();
-
-                        switch (position) {
-                            case 0:
-                                bottomNav.setSelectedItemId(R.id.nav_tasks);
-                                break;
-                            case 1:
-                                bottomNav.setSelectedItemId(R.id.nav_chat);
-                                break;
-                            case 2:
-                                bottomNav.setSelectedItemId(R.id.nav_settings);
-                                break;
-                        }
+                        if (position == 0) bottomNav.setSelectedItemId(R.id.nav_tasks);
+                        if (position == 1) bottomNav.setSelectedItemId(R.id.nav_chat);
+                        if (position == 2) bottomNav.setSelectedItemId(R.id.nav_settings);
                     }
                 }
         );
     }
+
 
     public ViewPager2 getViewPager() {
         return viewPager;
@@ -91,14 +80,10 @@ public class MainActivity extends AppCompatActivity {
         if (imm == null) return;
 
         if (current != null) {
-            // скрыть и снять фокус с текущего view
             imm.hideSoftInputFromWindow(current.getWindowToken(), 0);
             current.clearFocus();
         } else {
-            // если нет фокусного view — использовать декор окна (гарантия)
-            View decor = getWindow().getDecorView();
-            imm.hideSoftInputFromWindow(decor.getWindowToken(), 0);
+            imm.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
         }
     }
-
 }

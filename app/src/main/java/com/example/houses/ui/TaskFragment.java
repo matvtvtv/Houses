@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
@@ -20,6 +21,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.houses.R;
 import com.example.houses.adapter.DateAdapter;
@@ -32,9 +34,12 @@ import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -45,6 +50,7 @@ import okhttp3.ResponseBody;
 
 public class TaskFragment extends Fragment {
 
+    private static final String TAG = "TaskFragment";
     private SharedPreferences preferences;
     private static final String SERVER_HTTP_TASKS = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/tasks/";
 
@@ -62,6 +68,16 @@ public class TaskFragment extends Fragment {
     private RecyclerView recyclerDays, recyclerTasks;
     private DateAdapter dateAdapter;
     private LocalDate selectedDate;
+    private ViewPager2 viewPager;
+
+    public TaskFragment() {
+    }
+
+    // Храним полный набор задач (нефильтрованный)
+    private final List<Task> allTasks = new ArrayList<>();
+
+    // Для парсинга ISO дат (yyyy-MM-dd)
+    private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -84,6 +100,16 @@ public class TaskFragment extends Fragment {
             rootView.requestFocus();
         }
 
+        // Попытка получить ViewPager2: сначала из Activity по id, иначе по дереву элементов
+        try {
+            viewPager = requireActivity().findViewById(R.id.viewPager);
+        } catch (Exception e) {
+            viewPager = null;
+        }
+        if (viewPager == null) {
+            viewPager = findParentViewPager(view);
+        }
+
         // --- recyclerTasks ---
         recyclerTasks = view.findViewById(R.id.recyclerTasks);
         recyclerTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -98,9 +124,34 @@ public class TaskFragment extends Fragment {
 
         // --- recyclerDays ---
         recyclerDays = view.findViewById(R.id.recyclerDays);
-        recyclerDays.setLayoutManager(
-                new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        );
+        recyclerDays.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
+
+
+        recyclerDays.setOnTouchListener((v, event) -> {
+            ViewPager2 viewPager = findParentViewPager(v);
+            if (viewPager != null) {
+                int action = event.getActionMasked();
+                if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
+                    viewPager.requestDisallowInterceptTouchEvent(true);
+                } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                    viewPager.requestDisallowInterceptTouchEvent(false);
+                }
+            }
+            return false; // Важно: позволяем RecyclerView обработать событие
+        });
+
+        recyclerDays.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                ViewPager2 viewPager = findParentViewPager(recyclerView);
+                if (viewPager != null) {
+                    viewPager.requestDisallowInterceptTouchEvent(
+                            newState == RecyclerView.SCROLL_STATE_DRAGGING
+                    );
+                }
+            }
+        });
 
         // --- поля ввода ---
         editTitle = view.findViewById(R.id.editTaskTitle);
@@ -111,7 +162,7 @@ public class TaskFragment extends Fragment {
         text = view.findViewById(R.id.textView);
         text.setText(chatLogin);
 
-        // --- скрытие клавиатуры по touch вне EditText ---
+        // --- hide keyboard on outside touch ---
         rootView.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 View focusedView = requireActivity().getCurrentFocus();
@@ -136,43 +187,47 @@ public class TaskFragment extends Fragment {
             @Override
             public void onScrollStateChanged(@NonNull RecyclerView rv, int newState) {
                 if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
-                    View v = requireActivity().getCurrentFocus();
-                    if (v != null) {
-                        v.clearFocus();
-                        hideKeyboard(v);
+                    View v2 = requireActivity().getCurrentFocus();
+                    if (v2 != null) {
+                        v2.clearFocus();
+                        hideKeyboard(v2);
                     }
                 }
             }
         });
 
-        // --- WebSocket ---
+        // --- WebSocket (НЕ трогал логику) ---
         stompClient = new StompClient(requireContext());
         stompClient.setListener(new StompClient.StompListener() {
             @Override
             public void onConnected() {
-                Log.d("TaskFragment", "WS connected");
+                Log.d(TAG, "WS connected");
                 stompClient.subscribeToTasks(chatLogin);
             }
 
             @Override
-            public void onChatMessage(com.example.houses.model.ChatMessage message) {}
+            public void onChatMessage(com.example.houses.model.ChatMessage message) { }
 
             @Override
             public void onTask(Task task) {
-                requireActivity().runOnUiThread(() -> adapter.updateTask(task));
+                // upsert into allTasks and reapply filter
+                requireActivity().runOnUiThread(() -> {
+                    upsertAllTasks(task);
+                    applyFilter();
+                });
             }
 
             @Override
             public void onError(String reason) {
-                Log.e("TaskFragment", "WS error: " + reason);
+                Log.e(TAG, "WS error: " + reason);
             }
         });
         stompClient.connect();
 
-        // --- инициализация дней ---
+        // --- days UI (init + listener that filters) ---
         initDaysList();
 
-        // --- кнопка создания задачи ---
+        // --- create button opens dialog ---
         btnCreate.setOnClickListener(v -> {
             NewTaskDialog dialog = new NewTaskDialog(requireContext(), chatLogin, task -> {
                 if (stompClient != null) {
@@ -192,20 +247,22 @@ public class TaskFragment extends Fragment {
         }
         adapter = null;
         rootView = null;
+        allTasks.clear();
     }
 
+    // ---------- HTTP loader ----------
     private void loadTasks(String chatId) {
         Request req = new Request.Builder().url(SERVER_HTTP_TASKS + chatId).build();
         httpClient.newCall(req).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                Log.e("TaskFragment", "tasks history fail", e);
+                Log.e(TAG, "tasks history fail", e);
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 if (!response.isSuccessful()) {
-                    Log.e("TaskFragment", "tasks history not successful: " + response.code());
+                    Log.e(TAG, "tasks history not successful: " + response.code());
                     return;
                 }
 
@@ -218,15 +275,101 @@ public class TaskFragment extends Fragment {
                 try {
                     list = gson.fromJson(body, listType);
                 } catch (Exception ex) {
-                    Log.e("TaskFragment", "JSON parse error", ex);
+                    Log.e(TAG, "JSON parse error", ex);
                     return;
                 }
 
                 if (list == null) return;
 
-                requireActivity().runOnUiThread(() -> adapter.setAll(list));
+                requireActivity().runOnUiThread(() -> {
+                    // replace allTasks and apply filter
+                    allTasks.clear();
+                    allTasks.addAll(list);
+                    applyFilter();
+                });
             }
         });
+    }
+
+    // ---------- filtering logic ----------
+    private void applyFilter() {
+        if (selectedDate == null) {
+            // if no date selected, show all
+            adapter.setAll(new ArrayList<>(allTasks));
+            return;
+        }
+        List<Task> filtered = new ArrayList<>();
+        for (Task t : allTasks) {
+            if (shouldShowOnDate(t, selectedDate)) filtered.add(t);
+        }
+        adapter.setAll(filtered);
+    }
+
+
+    private boolean shouldShowOnDate(Task t, LocalDate selected) {
+        // parse startDate if present
+        LocalDate start = null;
+        try {
+            if (t.getStartDate() != null && !t.getStartDate().isEmpty()) {
+                start = LocalDate.parse(t.getStartDate(), ISO);
+            }
+        } catch (Exception ex) {
+            // некорректный формат даты — считаем как отсутствующий startDate
+            Log.w(TAG, "Failed to parse startDate for task id=" + t.getId() + ": " + ex.getMessage());
+            start = null;
+        }
+
+        String[] days = t.getDays(); // может быть null
+
+        // case: both absent => show always
+        if (start == null && (days == null || days.length == 0)) {
+            return true;
+        }
+
+        // if days defined -> check weekday
+        boolean weekdayMatches = false;
+        if (days != null && days.length > 0) {
+            DayOfWeek dow = selected.getDayOfWeek();
+            String name = dow.toString().toUpperCase(Locale.ROOT); // e.g. "MONDAY"
+            for (String s : days) {
+                if (s == null) continue;
+                if (s.trim().equalsIgnoreCase(name)) {
+                    weekdayMatches = true;
+                    break;
+                }
+            }
+        }
+
+        if (start != null) {
+            // has startDate
+            if (days != null && days.length > 0) {
+                // repeating with start
+                return !selected.isBefore(start) && weekdayMatches;
+            } else {
+                // single occurrence at startDate
+                return selected.equals(start);
+            }
+        } else {
+            // no startDate but days defined
+            return weekdayMatches;
+        }
+    }
+
+    // ---------- helpers ----------
+    private void upsertAllTasks(Task t) {
+        if (t == null) return;
+        // try to find by id
+        if (t.getId() != null) {
+            for (int i = 0; i < allTasks.size(); i++) {
+                Task cur = allTasks.get(i);
+                if (cur.getId() != null && cur.getId().equals(t.getId())) {
+                    allTasks.set(i, t);
+                    return;
+                }
+            }
+        }
+        // otherwise add
+        allTasks.add(t);
     }
 
     private void hideKeyboard(View view) {
@@ -237,17 +380,38 @@ public class TaskFragment extends Fragment {
         }
     }
 
+    // ---------- days list ----------
     private void initDaysList() {
         List<DayItem> days = new ArrayList<>();
         LocalDate today = LocalDate.now();
-        selectedDate = today;
+        selectedDate = today; // default selection = today
 
         for (int i = 0; i < 14; i++) {
             DayItem dayItem = new DayItem(today.plusDays(i), i == 0);
             days.add(dayItem);
         }
 
-        dateAdapter = new DateAdapter(days, item -> selectedDate = item.date);
+        dateAdapter = new DateAdapter(days, item -> {
+            selectedDate = item.date;
+            Log.d(TAG, "Date selected: " + selectedDate);
+            applyFilter();
+        });
         recyclerDays.setAdapter(dateAdapter);
+
+        // apply initial filter for today
+        applyFilter();
     }
+
+    @Nullable
+    private ViewPager2 findParentViewPager(View view) {
+        ViewParent parent = view.getParent();
+        while (parent != null) {
+            if (parent instanceof ViewPager2) {
+                return (ViewPager2) parent;
+            }
+            parent = parent.getParent();
+        }
+        return null;
+    }
+
 }
