@@ -50,6 +50,12 @@
             android:id="@+id/cbTaskCompleted"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
+        <Button
+            android:id="@+id/btnRespond"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Откликнуться"/>
+
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>

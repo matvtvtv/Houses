@@ -2,12 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.hilt)
 }
-
 android {
     namespace = "com.example.houses"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.houses"
@@ -28,10 +25,14 @@ android {
             )
         }
     }
+
     compileOptions {
+        // desugaring + Java 11 compatibility
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
         viewBinding = true
     }
@@ -45,20 +46,26 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
     implementation(libs.fragment)
-    implementation(libs.viewpeger)
+    implementation(libs.viewpager2)
     implementation(libs.recyclerview)
     implementation(libs.cardview)
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
     implementation(libs.okhttp)
     implementation(libs.retrofit)
-    implementation(libs.convertergson)
+    implementation(libs.converter.gson)
     implementation(libs.flexbox)
+
+    // core library desugaring dependency (правильный вызов)
+    coreLibraryDesugaring(libs.coreLibraryDesugaring)
+
     implementation("de.hdodenhof:circleimageview:3.1.0")
+
+    // annotation processors (если проект на Java)
     annotationProcessor(libs.lombok)
+    annotationProcessor(libs.hilt.compiler)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
-    annotationProcessor(libs.hilt.compiler)
-
 }

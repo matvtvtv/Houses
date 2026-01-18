@@ -5,6 +5,7 @@ package com.example.houses.adapter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
@@ -19,10 +20,20 @@ import java.util.List;
 
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
 
+    public interface OnTaskActionListener {
+        void onRespond(Task task, int position);
+    }
+
     private final List<Task> items = new ArrayList<>();
+    private final OnTaskActionListener listener;
 
-    public TaskAdapter() {}
-
+    public TaskAdapter(OnTaskActionListener listener) {
+        this.listener = listener;
+    }
+    @Override
+    public int getItemCount() {
+        return items.size();
+    }
     public void setAll(List<Task> list) {
         items.clear();
         if (list != null) items.addAll(list);
@@ -60,12 +71,10 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         holder.desc.setText(t.getDescription());
         holder.money.setText(String.valueOf(t.getMoney()));
         holder.cbCompleted.setChecked(t.isCompleted());
-        // можно добавить callback'и по нажатию на checkbox
-    }
 
-    @Override
-    public int getItemCount() {
-        return items.size();
+        holder.btnRespond.setOnClickListener(v -> {
+            if (listener != null) listener.onRespond(t, holder.getAdapterPosition());
+        });
     }
 
     static class VH extends RecyclerView.ViewHolder {
@@ -73,13 +82,15 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         TextView desc;
         TextView money;
         CheckBox cbCompleted;
+        Button btnRespond;
 
         VH(@NonNull View itemView) {
             super(itemView);
             title = itemView.findViewById(R.id.tvTaskTitle);
             desc = itemView.findViewById(R.id.tvTaskDesc);
             cbCompleted = itemView.findViewById(R.id.cbTaskCompleted);
-            money=itemView.findViewById(R.id.tvTaskMoney);
+            money = itemView.findViewById(R.id.tvTaskMoney);
+            btnRespond = itemView.findViewById(R.id.btnRespond); // new
         }
     }
 }

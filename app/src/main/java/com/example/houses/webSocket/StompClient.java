@@ -24,7 +24,6 @@ import okhttp3.WebSocketListener;
 public class StompClient {
 
     private final Context context;
-
     private static final String TAG = "StompClient";
     private final String serverUrl = "wss://t7lvb7zl-8080.euw.devtunnels.ms/chat";
 
@@ -77,9 +76,6 @@ public class StompClient {
                                 "heart-beat:10000,10000\n\n" +
                                 "\u0000";
                 webSocket.send(connect);
-
-
-
             }
 
             @Override
@@ -107,7 +103,6 @@ public class StompClient {
         mainHandler.postDelayed(this::connect, 3000);
     }
 
-    // ---- core frame handling: parse headers and route message by destination ----
     private void handleFrame(String frame) {
         for (String p : frame.split("\u0000")) {
             if (p.trim().isEmpty()) continue;
@@ -125,9 +120,7 @@ public class StompClient {
                     postConnected();
                     break;
 
-
                 case "MESSAGE":
-                    // headers и body разделены пустой строкой "\n\n"
                     int idx = headersAndBody.indexOf("\n\n");
                     String headersPart = idx != -1 ? headersAndBody.substring(0, idx) : "";
                     String body = idx != -1 ? headersAndBody.substring(idx + 2) : headersAndBody;
@@ -136,10 +129,7 @@ public class StompClient {
                     Map<String, String> headers = parseHeaders(headersPart);
 
                     String destination = headers.get("destination");
-                    if (destination == null) {
-                        Log.w(TAG, "MESSAGE without destination header");
-                        break;
-                    }
+                    if (destination == null) break;
 
                     try {
                         if (destination.startsWith("/topic/chat/")) {
@@ -148,8 +138,6 @@ public class StompClient {
                         } else if (destination.startsWith("/topic/tasks/")) {
                             Task task = gson.fromJson(body, Task.class);
                             postTask(task);
-                        } else {
-                            Log.d(TAG, "Unhandled destination: " + destination);
                         }
                     } catch (JsonSyntaxException ex) {
                         Log.e(TAG, "JSON parse error: " + ex.getMessage());
@@ -178,8 +166,6 @@ public class StompClient {
         return map;
     }
 
-    // ---- post helpers ----
-
     private void postConnected() {
         mainHandler.post(() -> {
             if (listener != null) listener.onConnected();
@@ -205,7 +191,6 @@ public class StompClient {
     }
 
     // ---- generic subscribe/send ----
-
     public void subscribe(String destination) {
         if (!connected) return;
         String id = "sub-" + UUID.randomUUID();
@@ -231,9 +216,13 @@ public class StompClient {
         ws.send(frame);
     }
 
-    // convenience for tasks
-    public void sendTask( String chatLogin, Object taskPayload) {
+    // ---- convenience for tasks ----
+    public void sendTask(String chatLogin, Object taskPayload) {
         send("/app/tasks/" + chatLogin + "/create", taskPayload);
+    }
+
+    public void sendUpdate(String chatLogin, Object taskPayload) {
+        send("/app/tasks/" + chatLogin + "/update", taskPayload);
     }
 
     public void disconnect() {
@@ -243,18 +232,14 @@ public class StompClient {
             connected = false;
         }
     }
-
-    // DTO container (оставляем)
     public static class MessageDTO {
         public String sender;
         public String content;
         public String image;
-
         public MessageDTO(String sender, String content, String image) {
             this.sender = sender;
             this.content = content;
             this.image = image;
-
         }
     }
 }

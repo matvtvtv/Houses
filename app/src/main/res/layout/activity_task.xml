@@ -28,28 +28,6 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <EditText
-        android:id="@+id/editTaskTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Название" />
-
-    <EditText
-        android:id="@+id/editTaskDesc"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Описание" />
-
-    <EditText
-        android:id="@+id/editTaskMoney"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Награда"
-        android:inputType="numberSigned" />
-
-    <!-- КНОПКИ -->
-
-    <!-- СПИСОК -->
     <Button
         android:id="@+id/btnCreateTask"
         android:layout_width="wrap_content"
@@ -57,6 +35,12 @@
         android:text="Создать"
         android:backgroundTint="@color/light_green"
         />
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerDays"
+        android:layout_width="match_parent"
+        android:layout_height="90dp"
+        android:overScrollMode="never"/>
+
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerTasks"

@@ -2,7 +2,6 @@ package com.example.houses.ui;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Rect;
 import android.os.Bundle;
@@ -15,7 +14,6 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -23,10 +21,10 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.houses.ChatMassageActivity;
-import com.example.houses.MainActivity;
 import com.example.houses.R;
+import com.example.houses.adapter.DateAdapter;
 import com.example.houses.adapter.TaskAdapter;
+import com.example.houses.model.DayItem;
 import com.example.houses.model.Task;
 import com.example.houses.webSocket.StompClient;
 import com.google.gson.Gson;
@@ -34,6 +32,8 @@ import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import okhttp3.Call;
@@ -56,34 +56,53 @@ public class TaskFragment extends Fragment {
     private EditText editTitle, editDesc, editMoney;
     private Button btnCreate;
     private TextView text;
-    private Button button_menu, button_chat;
+
     private View rootView;
+
+    private RecyclerView recyclerDays, recyclerTasks;
+    private DateAdapter dateAdapter;
+    private LocalDate selectedDate;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.activity_task, container, false);
-
     }
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
         hideKeyboard(view);
         preferences = requireActivity().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         String chatLogin = preferences.getString("chatLogin", "1");
 
+        // --- rootView ---
         rootView = view.findViewById(R.id.rootLayout);
         if (rootView != null) {
             rootView.setFocusableInTouchMode(true);
             rootView.requestFocus();
         }
-        RecyclerView rv = view.findViewById(R.id.recyclerTasks);
-        rv.setLayoutManager(new LinearLayoutManager(requireContext()));
-        adapter = new TaskAdapter();
-        rv.setAdapter(adapter);
 
+        // --- recyclerTasks ---
+        recyclerTasks = view.findViewById(R.id.recyclerTasks);
+        recyclerTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
+        adapter = new TaskAdapter((task, pos) -> {
+            String myLogin = preferences.getString("chatLogin", "1");
+            task.setUserLogin(myLogin);
+            if (stompClient != null) {
+                stompClient.sendUpdate(chatLogin, task);
+            }
+        });
+        recyclerTasks.setAdapter(adapter);
 
+        // --- recyclerDays ---
+        recyclerDays = view.findViewById(R.id.recyclerDays);
+        recyclerDays.setLayoutManager(
+                new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        );
+
+        // --- поля ввода ---
         editTitle = view.findViewById(R.id.editTaskTitle);
         editDesc = view.findViewById(R.id.editTaskDesc);
         editMoney = view.findViewById(R.id.editTaskMoney);
@@ -92,45 +111,28 @@ public class TaskFragment extends Fragment {
         text = view.findViewById(R.id.textView);
         text.setText(chatLogin);
 
-        // Установка обработчиков
-        if (button_menu != null) {
-            button_menu.setOnClickListener(v -> {
-                Intent intent = new Intent(requireContext(), MainActivity.class);
-                startActivity(intent);
-            });
-        }
-
-        if (button_chat != null) {
-            button_chat.setOnClickListener(v -> {
-                Intent intent = new Intent(requireContext(), ChatMassageActivity.class);
-                startActivity(intent);
-            });
-        }
-
-        // Главный обработчик касаний для скрытия клавиатуры
+        // --- скрытие клавиатуры по touch вне EditText ---
         rootView.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 View focusedView = requireActivity().getCurrentFocus();
                 if (focusedView instanceof EditText) {
                     Rect outRect = new Rect();
                     focusedView.getGlobalVisibleRect(outRect);
-
-                    // Если касание было вне EditText
                     if (!outRect.contains((int) event.getRawX(), (int) event.getRawY())) {
                         focusedView.clearFocus();
                         hideKeyboard(focusedView);
-                        return true; // Поглощаем событие
+                        return true;
                     }
                 }
             }
-            return false; // Продолжаем распространение события
+            return false;
         });
 
-
+        // --- HTTP client ---
         httpClient = new OkHttpClient();
         loadTasks(chatLogin);
 
-        rv.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        recyclerTasks.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(@NonNull RecyclerView rv, int newState) {
                 if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
@@ -143,6 +145,7 @@ public class TaskFragment extends Fragment {
             }
         });
 
+        // --- WebSocket ---
         stompClient = new StompClient(requireContext());
         stompClient.setListener(new StompClient.StompListener() {
             @Override
@@ -164,39 +167,19 @@ public class TaskFragment extends Fragment {
                 Log.e("TaskFragment", "WS error: " + reason);
             }
         });
-
         stompClient.connect();
 
+        // --- инициализация дней ---
+        initDaysList();
+
+        // --- кнопка создания задачи ---
         btnCreate.setOnClickListener(v -> {
-            String t = editTitle.getText().toString().trim();
-            String d = editDesc.getText().toString().trim();
-            String money = editMoney.getText().toString().trim();
-
-            if (t.isEmpty() || money.isEmpty()) {
-                Toast.makeText(requireContext(), "Fill all fields", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            int m;
-            try {
-                m = Integer.parseInt(money);
-            } catch (NumberFormatException e) {
-                Toast.makeText(requireContext(), "Money must be a number", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            Task newTask = new Task();
-            newTask.setChatLogin(chatLogin);
-            newTask.setTitle(t);
-            newTask.setDescription(d);
-            newTask.setMoney(m);
-            newTask.setCompleted(false);
-
-            stompClient.sendTask(chatLogin, newTask);
-
-            editTitle.setText("");
-            editDesc.setText("");
-            editMoney.setText("");
+            NewTaskDialog dialog = new NewTaskDialog(requireContext(), chatLogin, task -> {
+                if (stompClient != null) {
+                    stompClient.sendTask(chatLogin, task);
+                }
+            });
+            dialog.show();
         });
     }
 
@@ -247,7 +230,24 @@ public class TaskFragment extends Fragment {
     }
 
     private void hideKeyboard(View view) {
-        InputMethodManager imm = (InputMethodManager) requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        InputMethodManager imm = (InputMethodManager) requireContext()
+                .getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+    }
+
+    private void initDaysList() {
+        List<DayItem> days = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        selectedDate = today;
+
+        for (int i = 0; i < 14; i++) {
+            DayItem dayItem = new DayItem(today.plusDays(i), i == 0);
+            days.add(dayItem);
+        }
+
+        dateAdapter = new DateAdapter(days, item -> selectedDate = item.date);
+        recyclerDays.setAdapter(dateAdapter);
     }
 }
