@@ -22,6 +22,7 @@ import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 import androidx.work.WorkRequest;
 
+import com.example.houses.Notification.NotificationForegroundService;
 import com.example.houses.Notification.NotificationWorker;
 import com.example.houses.adapter.ViewPagerAdapter;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -57,6 +58,16 @@ public class MainActivity extends AppCompatActivity {
         } else if (login.equals("1")) {
             startActivity(new Intent(this, RegistrationActivity.class));
         }
+
+        Intent serviceIntent = new Intent(this, NotificationForegroundService.class);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+
+
 
         viewPager = findViewById(R.id.viewPager);
         bottomNav = findViewById(R.id.bottomNavigation);

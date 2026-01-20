@@ -40,20 +40,49 @@
             android:textSize="16sp"
             android:layout_marginBottom="16dp"/>
 
-        <!-- PASSWORD -->
-        <EditText
-            android:id="@+id/etPassword"
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Password"
-            android:textColorHint="@color/white"
-            android:inputType="textPassword"
-            android:textColor="@android:color/white"
-            android:background="@drawable/edit_text_underline"
-            android:padding="10dp"
-            android:textCursorDrawable="@null"
-            android:textSize="16sp"
-            android:layout_marginBottom="20dp"/>
+            app:endIconMode="password_toggle"
+            app:endIconTint="@android:color/white"
+            app:hintEnabled="false">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPassword"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Password"
+                android:inputType="textPassword"
+                android:textColor="@android:color/white"
+                android:textColorHint="@android:color/white"
+                android:padding="10dp"
+                android:textSize="16sp"
+                android:background="@drawable/edit_text_underline"/>
+
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:endIconMode="password_toggle"
+            app:endIconTint="@android:color/white"
+            app:hintEnabled="false">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPasswordСonfirmation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Confirm  password"
+                android:inputType="textPassword"
+                android:textColor="@android:color/white"
+                android:textColorHint="@android:color/white"
+                android:padding="10dp"
+                android:textSize="16sp"
+                android:background="@drawable/edit_text_underline"/>
+
+        </com.google.android.material.textfield.TextInputLayout>
+
 
         <!-- ROLE TITLE -->
         <TextView

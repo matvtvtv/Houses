@@ -2,6 +2,7 @@ package com.example.houses.ui;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Rect;
 import android.os.Bundle;
@@ -12,7 +13,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -24,6 +24,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.example.houses.Notification.TaskForegroundService;
+import com.example.houses.Notification.TaskForegroundServiceHolder;
 import com.example.houses.R;
 import com.example.houses.adapter.DateAdapter;
 import com.example.houses.adapter.TaskAdapter;
@@ -70,6 +72,8 @@ public class TaskFragment extends Fragment {
     private DateAdapter dateAdapter;
     private LocalDate selectedDate;
     private ViewPager2 viewPager;
+    private boolean isVisibleToUser = false;
+
 
     public TaskFragment() {
     }
@@ -94,14 +98,19 @@ public class TaskFragment extends Fragment {
         preferences = requireActivity().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         String chatLogin = preferences.getString("chatLogin", "1");
 
-        // --- rootView ---
+
+        Intent serviceIntent = new Intent(requireContext(), TaskForegroundService.class);
+        requireActivity().startForegroundService(serviceIntent);
+
+
+
+
         rootView = view.findViewById(R.id.rootLayout);
         if (rootView != null) {
             rootView.setFocusableInTouchMode(true);
             rootView.requestFocus();
         }
 
-        // Попытка получить ViewPager2: сначала из Activity по id, иначе по дереву элементов
         try {
             viewPager = requireActivity().findViewById(R.id.viewPager);
         } catch (Exception e) {
@@ -111,7 +120,6 @@ public class TaskFragment extends Fragment {
             viewPager = findParentViewPager(view);
         }
 
-        // --- recyclerTasks ---
         recyclerTasks = view.findViewById(R.id.recyclerTasks);
         recyclerTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
         adapter = new TaskAdapter((task, pos) -> {
@@ -123,7 +131,6 @@ public class TaskFragment extends Fragment {
         });
         recyclerTasks.setAdapter(adapter);
 
-        // --- recyclerDays ---
         recyclerDays = view.findViewById(R.id.recyclerDays);
         recyclerDays.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
 
@@ -154,7 +161,6 @@ public class TaskFragment extends Fragment {
             }
         });
 
-        // --- поля ввода ---
         editTitle = view.findViewById(R.id.editTaskTitle);
         editDesc = view.findViewById(R.id.editTaskDesc);
         editMoney = view.findViewById(R.id.editTaskMoney);
@@ -163,7 +169,6 @@ public class TaskFragment extends Fragment {
         text = view.findViewById(R.id.textView);
         text.setText("логин группы: "+chatLogin);
 
-        // --- hide keyboard on outside touch ---
         rootView.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 View focusedView = requireActivity().getCurrentFocus();
@@ -180,7 +185,6 @@ public class TaskFragment extends Fragment {
             return false;
         });
 
-        // --- HTTP client ---
         httpClient = new OkHttpClient();
         loadTasks(chatLogin);
 
@@ -197,7 +201,6 @@ public class TaskFragment extends Fragment {
             }
         });
 
-        // --- WebSocket (НЕ трогал логику) ---
         stompClient = new StompClient(requireContext());
         stompClient.setListener(new StompClient.StompListener() {
             @Override
@@ -211,12 +214,28 @@ public class TaskFragment extends Fragment {
 
             @Override
             public void onTask(Task task) {
-                // upsert into allTasks and reapply filter
                 requireActivity().runOnUiThread(() -> {
                     upsertAllTasks(task);
                     applyFilter();
+
+                    String myLogin = preferences.getString("chatLogin", "1");
+
+                    boolean isMyTask =
+                            task.getUserLogin() != null &&
+                                    task.getUserLogin().equals(myLogin);
+
+
+                    if (!isMyTask) {
+                        // Отправляем задачу в сервис
+                        TaskForegroundServiceHolder.enqueue(task, requireContext());
+                    }
+
+
                 });
             }
+
+
+
 
             @Override
             public void onError(String reason) {
@@ -414,5 +433,17 @@ public class TaskFragment extends Fragment {
         }
         return null;
     }
+    @Override
+    public void onResume() {
+        super.onResume();
+        isVisibleToUser = true;
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        isVisibleToUser = false;
+    }
+
 
 }

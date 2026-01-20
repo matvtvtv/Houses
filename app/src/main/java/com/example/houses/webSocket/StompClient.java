@@ -81,6 +81,7 @@ public class StompClient {
             @Override
             public void onMessage(WebSocket webSocket, String text) {
                 handleFrame(text);
+                //howNotification("Новая задача", "У вас появилось новое задание!");
             }
 
             @Override

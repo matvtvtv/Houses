@@ -32,7 +32,7 @@ import okhttp3.Response;
 
 public class RegistrationActivity extends AppCompatActivity {
 
-    EditText etLogin, etName, etPassword;
+    EditText etLogin, etName, etPassword,etPasswordConform;
     private Button btnRegister,btnEnterance;
     private RadioGroup rgRole;
 
@@ -50,8 +50,11 @@ public class RegistrationActivity extends AppCompatActivity {
         etLogin = findViewById(R.id.etLogin);
         etName = findViewById(R.id.etName);
         etPassword = findViewById(R.id.etPassword);
+        etPasswordConform = findViewById(R.id.etPasswordСonfirmation);
+
         btnRegister = findViewById(R.id.btnRegister);
         btnEnterance = findViewById(R.id.btnEnterance);
+
 
         rgRole = findViewById(R.id.rgRole);
         RadioButton rb = findViewById(R.id.rbParent);
@@ -72,15 +75,22 @@ public class RegistrationActivity extends AppCompatActivity {
         String login = etLogin.getText().toString().trim();
         String name = etName.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
+        String passwordConform = etPasswordConform.getText().toString().trim();
 
 
 
-        if (login.isEmpty() || name.isEmpty() || password.isEmpty()) {
+        if (login.isEmpty() || name.isEmpty() || password.isEmpty()|| passwordConform.isEmpty()) {
             Toast.makeText(this, "Fill all fields", Toast.LENGTH_SHORT).show();
             return;
         }
+        if(!(password.equals(passwordConform)) ) {
+            Toast.makeText(this, "Пароли не совпадают", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
 
         int selectedId = rgRole.getCheckedRadioButtonId();
+
         if (selectedId == -1) {
             Toast.makeText(this, "Choose role", Toast.LENGTH_SHORT).show();
             return;
