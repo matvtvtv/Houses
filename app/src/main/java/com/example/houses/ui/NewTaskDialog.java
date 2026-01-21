@@ -5,16 +5,17 @@ import android.app.Dialog;
 import android.content.Context;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 
 import com.example.houses.R;
 import com.example.houses.model.Task;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.textfield.TextInputEditText;
+import android.widget.TextView;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -23,22 +24,24 @@ import java.util.List;
 
 public class NewTaskDialog extends Dialog {
 
-    private EditText editTitle, editDesc, editMoney;
-    private Button btnCreate, btnCancel, btnPickDate, btnClearDate;
+    private TextInputEditText editTitle, editDesc, editMoney;
+    private MaterialButton btnCreate, btnCancel, btnPickDate;
     private TextView tvStartDate;
-    private CheckBox cbMon, cbTue, cbWed, cbThu, cbFri, cbSat, cbSun;
+    // Заменяем CheckBox на Chip
+    private Chip chipMon, chipTue, chipWed, chipThu, chipFri, chipSat, chipSun;
 
     private final String chatLogin;
     private final NewTaskListener listener;
 
     private LocalDate selectedDate = null;
+    private static final DateTimeFormatter FORMATTER_RU = DateTimeFormatter.ofPattern("d MMMM yyyy");
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE;
 
     public interface NewTaskListener {
         void onTaskCreated(Task task);
     }
 
-    public NewTaskDialog(Context ctx, String chatLogin, NewTaskListener listener) {
+    public NewTaskDialog(@NonNull Context ctx, String chatLogin, NewTaskListener listener) {
         super(ctx);
         this.chatLogin = chatLogin;
         this.listener = listener;
@@ -49,100 +52,108 @@ public class NewTaskDialog extends Dialog {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.dialog_new_task);
 
+        // Инициализация полей ввода
         editTitle = findViewById(R.id.editTaskTitle);
         editDesc = findViewById(R.id.editTaskDesc);
         editMoney = findViewById(R.id.editTaskMoney);
 
         tvStartDate = findViewById(R.id.tvStartDate);
         btnPickDate = findViewById(R.id.btnPickDate);
-        btnClearDate = findViewById(R.id.btnClearDate);
 
-        cbMon = findViewById(R.id.cbMon);
-        cbTue = findViewById(R.id.cbTue);
-        cbWed = findViewById(R.id.cbWed);
-        cbThu = findViewById(R.id.cbThu);
-        cbFri = findViewById(R.id.cbFri);
-        cbSat = findViewById(R.id.cbSat);
-        cbSun = findViewById(R.id.cbSun);
+        // Инициализация Чипсов (Chips)
+        chipMon = findViewById(R.id.chipMon);
+        chipTue = findViewById(R.id.chipTue);
+        chipWed = findViewById(R.id.chipWed);
+        chipThu = findViewById(R.id.chipThu);
+        chipFri = findViewById(R.id.chipFri);
+        chipSat = findViewById(R.id.chipSat);
+        chipSun = findViewById(R.id.chipSun);
 
         btnCreate = findViewById(R.id.btnCreateTask);
         btnCancel = findViewById(R.id.btnCancelTask);
 
+        // Выбор даты
         btnPickDate.setOnClickListener(v -> {
             LocalDate now = LocalDate.now();
             DatePickerDialog dp = new DatePickerDialog(getContext(),
                     (view, year, month, dayOfMonth) -> {
                         selectedDate = LocalDate.of(year, month + 1, dayOfMonth);
-                        tvStartDate.setText("Дата начала: " + selectedDate.format(ISO));
+                        tvStartDate.setText(selectedDate.format(FORMATTER_RU));
                     }, now.getYear(), now.getMonthValue() - 1, now.getDayOfMonth());
             dp.show();
-        });
-
-        btnClearDate.setOnClickListener(v -> {
-            selectedDate = null;
-            tvStartDate.setText("Дата начала: не задана");
         });
 
         btnCancel.setOnClickListener(v -> dismiss());
 
         btnCreate.setOnClickListener(v -> {
-            String title = editTitle.getText().toString().trim();
-            String desc = editDesc.getText().toString().trim();
-            String moneyStr = editMoney.getText().toString().trim();
-
-            if (TextUtils.isEmpty(title) || TextUtils.isEmpty(moneyStr)) {
-                Toast.makeText(getContext(), "Заполните название и награду", Toast.LENGTH_SHORT).show();
-                return;
+            if (validateAndCreate()) {
+                dismiss();
             }
-
-            int money;
-            try {
-                money = Integer.parseInt(moneyStr);
-            } catch (NumberFormatException e) {
-                Toast.makeText(getContext(), "Награда должна быть числом", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            Task task = new Task();
-            task.setChatLogin(chatLogin);
-            task.setTitle(title);
-            task.setDescription(desc);
-            task.setMoney(money);
-            task.setCompleted(false);
-
-            // days
-            List<String> daysList = new ArrayList<>();
-            if (cbMon.isChecked()) daysList.add("MONDAY");
-            if (cbTue.isChecked()) daysList.add("TUESDAY");
-            if (cbWed.isChecked()) daysList.add("WEDNESDAY");
-            if (cbThu.isChecked()) daysList.add("THURSDAY");
-            if (cbFri.isChecked()) daysList.add("FRIDAY");
-            if (cbSat.isChecked()) daysList.add("SATURDAY");
-            if (cbSun.isChecked()) daysList.add("SUNDAY");
-
-            if (!daysList.isEmpty()) {
-                task.setDays(daysList.toArray(new String[0]));
-                task.setRepeat(true);
-            }
-
-            // start date
-            if (selectedDate != null) {
-                task.setStartDate(selectedDate.format(ISO));
-            }
-
-            if (listener != null) listener.onTaskCreated(task);
-            dismiss();
         });
     }
+
+    private boolean validateAndCreate() {
+        String title = editTitle.getText().toString().trim();
+        String desc = editDesc.getText().toString().trim();
+        String moneyStr = editMoney.getText().toString().trim();
+
+        if (TextUtils.isEmpty(title) || TextUtils.isEmpty(moneyStr)) {
+            Toast.makeText(getContext(), "Заполните название и награду", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        int money;
+        try {
+            money = Integer.parseInt(moneyStr);
+        } catch (NumberFormatException e) {
+            Toast.makeText(getContext(), "Награда должна быть числом", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        Task task = new Task();
+        task.setChatLogin(chatLogin);
+        task.setTitle(title);
+        task.setDescription(desc);
+        task.setMoney(money);
+        task.setCompleted(false);
+
+        // Сбор выбранных дней через Чипсы
+        List<String> daysList = new ArrayList<>();
+        if (chipMon.isChecked()) daysList.add("MONDAY");
+        if (chipTue.isChecked()) daysList.add("TUESDAY");
+        if (chipWed.isChecked()) daysList.add("WEDNESDAY");
+        if (chipThu.isChecked()) daysList.add("THURSDAY");
+        if (chipFri.isChecked()) daysList.add("FRIDAY");
+        if (chipSat.isChecked()) daysList.add("SATURDAY");
+        if (chipSun.isChecked()) daysList.add("SUNDAY");
+
+        if (!daysList.isEmpty()) {
+            task.setDays(daysList.toArray(new String[0]));
+            task.setRepeat(true);
+        } else {
+            task.setRepeat(false);
+            task.setDays(null);
+        }
+
+        if (selectedDate != null) {
+            task.setStartDate(selectedDate.format(ISO));
+        }
+
+        if (listener != null) listener.onTaskCreated(task);
+        return true;
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
         if (getWindow() != null) {
+            // Делаем диалог на всю ширину для красоты Material Design
             getWindow().setLayout(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
             );
+            // Убираем стандартный фон диалога, чтобы были видны наши скругления
+            getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
     }
-
 }

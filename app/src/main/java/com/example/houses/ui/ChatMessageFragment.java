@@ -11,7 +11,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 
@@ -24,27 +23,28 @@ import com.example.houses.DB.DatabaseHelper;
 import com.example.houses.R;
 import com.example.houses.adapter.ChatMessageAdapter;
 import com.example.houses.model.ChatMessage;
+import com.example.houses.model.TaskInstanceDto;
 import com.example.houses.webSocket.StompClient;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import okhttp3.OkHttpClient;
-
-import java.io.IOException;
-
 import okhttp3.Call;
 import okhttp3.Callback;
+import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 public class ChatMessageFragment extends Fragment {
+
     private SharedPreferences preferences;
-    private static final String SERVER_HTTP_HISTORY = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chat/history/";
+    private static final String SERVER_HTTP_HISTORY =
+            "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chat/history/";
 
     private ChatMessageAdapter adapter;
     private StompClient stompClient;
@@ -55,25 +55,29 @@ public class ChatMessageFragment extends Fragment {
     private ImageView btnSend;
     private View rootView;
 
-
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
         return inflater.inflate(R.layout.activity_chat_message, container, false);
     }
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        preferences = requireContext().getSharedPreferences("AppPrefs", android.content.Context.MODE_PRIVATE);
+        preferences = requireContext()
+                .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
 
         RecyclerView rv = view.findViewById(R.id.recyclerMessages);
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
+
         String login = preferences.getString("login", "account");
         String chatLogin = preferences.getString("chatLogin", "1");
+
         adapter = new ChatMessageAdapter(login);
         rv.setAdapter(adapter);
+
         rootView = view.findViewById(R.id.main);
         editMessage = view.findViewById(R.id.editMessage);
         btnSend = view.findViewById(R.id.btnSend);
@@ -90,6 +94,7 @@ public class ChatMessageFragment extends Fragment {
 
         stompClient = new StompClient(requireContext());
 
+        // ====== слушатель STOMP ======
         stompClient.setListener(new StompClient.StompListener() {
             @Override
             public void onConnected() {
@@ -107,9 +112,11 @@ public class ChatMessageFragment extends Fragment {
                 });
             }
 
+
             @Override
-            public void onTask(com.example.houses.model.Task task) {
-                // Обработка задачи
+            public void onTaskInstance(TaskInstanceDto taskInstance) {
+                Log.d("ChatMessageFragment", "Received TaskInstance: " + taskInstance.getInstanceId());
+                // здесь можно обновлять адаптер задач, если нужно
             }
 
             @Override
@@ -120,40 +127,45 @@ public class ChatMessageFragment extends Fragment {
 
         stompClient.connect();
 
+        // ====== кнопка отправки ======
         btnSend.setOnClickListener(v -> {
             String text = editMessage.getText().toString().trim();
             if (text.isEmpty()) return;
 
-            byte[] avatarBytes = DatabaseHelper.getInstance(requireContext()).getUserAvatar(login);
+            byte[] avatarBytes = DatabaseHelper.getInstance(requireContext())
+                    .getUserAvatar(login);
 
             String avatarBase64 = null;
             if (avatarBytes != null) {
-                avatarBase64 = android.util.Base64.encodeToString(avatarBytes, android.util.Base64.DEFAULT);
+                avatarBase64 = android.util.Base64
+                        .encodeToString(avatarBytes, android.util.Base64.DEFAULT);
             }
-            Log.e("ChatMessageFragment", "S: " + avatarBase64);
 
+            // используем статический класс MessageDTO из StompClient
             StompClient.MessageDTO payload = new StompClient.MessageDTO(login, text, avatarBase64);
-            stompClient.send("/app/chat/" + preferences.getString("chatLogin", "") + "/send", payload);
+            stompClient.send("/app/chat/" + chatLogin + "/send", payload);
+
+            stompClient.send("/app/chat/" + chatLogin + "/send", payload);
             editMessage.setText("");
         });
 
+        // ====== скрытие клавиатуры при касании вне EditText ======
         rootView.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 View focusedView = requireActivity().getCurrentFocus();
                 if (focusedView instanceof EditText) {
                     Rect outRect = new Rect();
                     focusedView.getGlobalVisibleRect(outRect);
-
-                    // Если касание было вне EditText
                     if (!outRect.contains((int) event.getRawX(), (int) event.getRawY())) {
                         focusedView.clearFocus();
                         hideKeyboard(focusedView);
-                        return true; // Поглощаем событие
+                        return true;
                     }
                 }
             }
-            return false; // Продолжаем распространение события
+            return false;
         });
+
         rv.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(@NonNull RecyclerView rv, int newState) {
@@ -166,8 +178,6 @@ public class ChatMessageFragment extends Fragment {
                 }
             }
         });
-
-
     }
 
     @Override
@@ -182,9 +192,10 @@ public class ChatMessageFragment extends Fragment {
         btnSend = null;
     }
 
+    // ====== загрузка истории сообщений ======
     private void loadHistory() {
         Request req = new Request.Builder()
-                .url(SERVER_HTTP_HISTORY + preferences.getString("chatLogin", "3"))
+                .url(SERVER_HTTP_HISTORY + preferences.getString("chatLogin", "1"))
                 .build();
 
         httpClient.newCall(req).enqueue(new Callback() {
@@ -205,14 +216,7 @@ public class ChatMessageFragment extends Fragment {
 
                 String body = bodyObj.string();
                 Type listType = new TypeToken<List<ChatMessage>>() {}.getType();
-                final List<ChatMessage> list;
-
-                try {
-                    list = gson.fromJson(body, listType);
-                } catch (Exception ex) {
-                    Log.e("ChatMessageFragment", "JSON parse error", ex);
-                    return;
-                }
+                final List<ChatMessage> list = gson.fromJson(body, listType);
 
                 if (list == null) return;
 
@@ -220,8 +224,14 @@ public class ChatMessageFragment extends Fragment {
             }
         });
     }
+
+    // ====== скрытие клавиатуры ======
     private void hideKeyboard(View view) {
-        InputMethodManager imm = (InputMethodManager) requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        InputMethodManager imm = (InputMethodManager)
+                requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
     }
+
 }

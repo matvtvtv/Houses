@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.example.houses.model.Task;
+import com.example.houses.model.TaskInstanceDto;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,15 +14,13 @@ public class TaskForegroundServiceHolder {
     private static final String TAG = "TaskFGServiceHolder";
 
     private static TaskForegroundService serviceInstance;
-    // буфер задач, если сервис ещё не инициализирован
-    private static final List<Task> pending = new ArrayList<>();
+    private static final List<TaskInstanceDto> pending = new ArrayList<>();
 
     public static synchronized void setService(TaskForegroundService service) {
         Log.d(TAG, "setService -> service set");
         serviceInstance = service;
-        // пересылаем накопленные задачи
         if (serviceInstance != null && !pending.isEmpty()) {
-            for (Task t : pending) {
+            for (TaskInstanceDto t : pending) {
                 serviceInstance.enqueueTask(t);
             }
             pending.clear();
@@ -33,21 +32,18 @@ public class TaskForegroundServiceHolder {
         serviceInstance = null;
     }
 
-    public static synchronized void enqueue(Task task, Context context) {
-        if (task == null) return;
+    public static synchronized void enqueue(TaskInstanceDto instance, Context context) {
+        if (instance == null) return;
         if (serviceInstance != null) {
             Log.d(TAG, "enqueue -> delivered directly to service");
-            serviceInstance.enqueueTask(task);
+            serviceInstance.enqueueTask(instance);
         } else {
             Log.d(TAG, "enqueue -> service not ready, buffering and starting service");
-            // буферизуем задачу
-            pending.add(task);
-            // стартуем сервис (если ещё не стартован) — startForegroundService безопасен на Android >= O
+            pending.add(instance);
             Intent intent = new Intent(context.getApplicationContext(), TaskForegroundService.class);
             try {
                 context.getApplicationContext().startForegroundService(intent);
             } catch (Exception ex) {
-                // На некоторых устройствах нужен просто startService (fallback)
                 try {
                     context.getApplicationContext().startService(intent);
                 } catch (Exception e) {

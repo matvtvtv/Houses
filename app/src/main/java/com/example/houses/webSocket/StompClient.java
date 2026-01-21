@@ -1,16 +1,17 @@
 package com.example.houses.webSocket;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
 import com.example.houses.model.ChatMessage;
 import com.example.houses.model.Task;
+import com.example.houses.model.TaskInstanceDto;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -27,10 +28,8 @@ public class StompClient {
     private static final String TAG = "StompClient";
     private final String serverUrl = "wss://t7lvb7zl-8080.euw.devtunnels.ms/chat";
 
-    private SharedPreferences preferences;
     private final OkHttpClient client;
     private WebSocket ws;
-
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Gson gson = new Gson();
 
@@ -49,7 +48,7 @@ public class StompClient {
     public interface StompListener {
         void onConnected();
         void onChatMessage(ChatMessage message);
-        void onTask(Task task);
+        void onTaskInstance(TaskInstanceDto instance);
         void onError(String reason);
     }
 
@@ -68,7 +67,6 @@ public class StompClient {
             public void onOpen(WebSocket webSocket, okhttp3.Response response) {
                 connecting = false;
                 Log.d(TAG, "WS open");
-
                 String connect =
                         "CONNECT\n" +
                                 "accept-version:1.2\n" +
@@ -81,7 +79,6 @@ public class StompClient {
             @Override
             public void onMessage(WebSocket webSocket, String text) {
                 handleFrame(text);
-                //howNotification("Новая задача", "У вас появилось новое задание!");
             }
 
             @Override
@@ -112,11 +109,8 @@ public class StompClient {
             String command = lines[0].trim();
             String headersAndBody = lines.length > 1 ? lines[1] : "";
 
-            Log.d(TAG, "Frame command: " + command);
-
             switch (command) {
                 case "CONNECTED":
-                    preferences = context.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
                     connected = true;
                     postConnected();
                     break;
@@ -128,7 +122,6 @@ public class StompClient {
                     body = body.trim();
 
                     Map<String, String> headers = parseHeaders(headersPart);
-
                     String destination = headers.get("destination");
                     if (destination == null) break;
 
@@ -137,8 +130,8 @@ public class StompClient {
                             ChatMessage cm = gson.fromJson(body, ChatMessage.class);
                             postChatMessage(cm);
                         } else if (destination.startsWith("/topic/tasks/")) {
-                            Task task = gson.fromJson(body, Task.class);
-                            postTask(task);
+                            TaskInstanceDto inst = gson.fromJson(body, TaskInstanceDto.class);
+                            postTaskInstance(inst);
                         }
                     } catch (JsonSyntaxException ex) {
                         Log.e(TAG, "JSON parse error: " + ex.getMessage());
@@ -155,7 +148,6 @@ public class StompClient {
     private Map<String, String> parseHeaders(String headersPart) {
         Map<String, String> map = new HashMap<>();
         if (headersPart == null || headersPart.isEmpty()) return map;
-
         String[] lines = headersPart.split("\n");
         for (String line : lines) {
             int i = line.indexOf(':');
@@ -179,9 +171,9 @@ public class StompClient {
         });
     }
 
-    private void postTask(Task t) {
+    private void postTaskInstance(TaskInstanceDto t) {
         mainHandler.post(() -> {
-            if (listener != null) listener.onTask(t);
+            if (listener != null) listener.onTaskInstance(t);
         });
     }
 
@@ -191,7 +183,7 @@ public class StompClient {
         });
     }
 
-    // ---- generic subscribe/send ----
+    // --- Subscribe / Send ---
     public void subscribe(String destination) {
         if (!connected) return;
         String id = "sub-" + UUID.randomUUID();
@@ -208,20 +200,25 @@ public class StompClient {
     }
 
     public void send(String destination, Object payload) {
-        if (!connected) {
-            Log.w(TAG, "send() called before STOMP CONNECTED");
-            return;
-        }
+        if (!connected) return;
         String json = gson.toJson(payload);
         String frame = "SEND\ndestination:" + destination + "\ncontent-type:application/json\n\n" + json + "\u0000";
         ws.send(frame);
     }
 
-    // ---- convenience for tasks ----
-    public void sendTask(String chatLogin, Object taskPayload) {
-        send("/app/tasks/" + chatLogin + "/create", taskPayload);
-    }
+    public void sendTask(String chatLogin, Task task) {
+        // Создаем Map вместо отправки объекта Task напрямую
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("title", task.getTitle());
+        payload.put("description", task.getDescription());
+        payload.put("money", task.getMoney());
+        payload.put("repeat", task.isRepeat());
+        payload.put("repeatDays", task.getDays() != null ? Arrays.asList(task.getDays()) : null);
+        payload.put("startDate", task.getStartDate());
+        payload.put("targetLogin", task.getTargetLogin()); // если есть
 
+        send("/app/ws/tasks/" + chatLogin + "/create", payload);
+    }
     public void sendUpdate(String chatLogin, Object taskPayload) {
         send("/app/tasks/" + chatLogin + "/update", taskPayload);
     }
@@ -236,7 +233,8 @@ public class StompClient {
     public static class MessageDTO {
         public String sender;
         public String content;
-        public String image;
+        public String image; // base64 изображения
+
         public MessageDTO(String sender, String content, String image) {
             this.sender = sender;
             this.content = content;
