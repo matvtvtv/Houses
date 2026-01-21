@@ -73,7 +73,8 @@ public class MainActivity extends AppCompatActivity {
         bottomNav = findViewById(R.id.bottomNavigation);
 
         viewPager.setAdapter(new ViewPagerAdapter(this));
-        viewPager.setOffscreenPageLimit(3);
+        viewPager.setOffscreenPageLimit(5);
+        viewPager.setUserInputEnabled(false);
 
         bottomNav.setOnItemSelectedListener(item -> {
             if (item.getItemId() == R.id.nav_tasks) {
@@ -84,8 +85,16 @@ public class MainActivity extends AppCompatActivity {
                 viewPager.setCurrentItem(1, false);
                 return true;
             }
-            if (item.getItemId() == R.id.nav_settings) {
+            if (item.getItemId() == R.id.nav_stats) {
                 viewPager.setCurrentItem(2, false);
+                return true;
+            }
+            if (item.getItemId() == R.id.nav_stats_chat) {
+                viewPager.setCurrentItem(3, false);
+                return true;
+            }
+            if (item.getItemId() == R.id.nav_settings) {
+                viewPager.setCurrentItem(4, false);
                 return true;
             }
             return false;
@@ -98,7 +107,9 @@ public class MainActivity extends AppCompatActivity {
                         hideKeyboard();
                         if (position == 0) bottomNav.setSelectedItemId(R.id.nav_tasks);
                         if (position == 1) bottomNav.setSelectedItemId(R.id.nav_chat);
-                        if (position == 2) bottomNav.setSelectedItemId(R.id.nav_settings);
+                        if (position == 2) bottomNav.setSelectedItemId(R.id.nav_stats);
+                        if (position == 3) bottomNav.setSelectedItemId(R.id.nav_stats_chat);
+                        if (position == 4) bottomNav.setSelectedItemId(R.id.nav_settings);
                     }
                 }
         );

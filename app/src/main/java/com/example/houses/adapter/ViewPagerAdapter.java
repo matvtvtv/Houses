@@ -7,6 +7,8 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import com.example.houses.ui.ChatMessageFragment;
 import com.example.houses.ui.SettingsFragment;
+import com.example.houses.ui.StatsChartFragment;
+import com.example.houses.ui.StatsFragment;
 import com.example.houses.ui.TaskFragment;
 
 public class ViewPagerAdapter extends FragmentStateAdapter {
@@ -20,11 +22,13 @@ public class ViewPagerAdapter extends FragmentStateAdapter {
     public Fragment createFragment(int position) {
         if (position == 0) return new TaskFragment();
         if (position == 1) return new ChatMessageFragment();
+        if (position == 2) return new StatsFragment();
+        if (position == 3) return new StatsChartFragment();
         return new SettingsFragment();
     }
 
     @Override
     public int getItemCount() {
-        return 3;
+        return 5;
     }
 }

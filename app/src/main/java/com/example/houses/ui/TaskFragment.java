@@ -108,19 +108,28 @@ public class TaskFragment extends Fragment {
         preferences = requireActivity()
                 .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         String chatLogin = preferences.getString("chatLogin", "1");
+        String userLogin = preferences.getString("login", "1");
+        String userRole = preferences.getString("role", "CHILD");
 
         httpClient = new OkHttpClient();
         loadTasksRange(chatLogin, LocalDate.now(), LocalDate.now().plusDays(13));
-        //updateTaskInstance(instance);
+
         recyclerTasks = view.findViewById(R.id.recyclerTasks);
         recyclerTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
         btnCreate = view.findViewById(R.id.btnCreateTask);
 
-        adapter = new TaskAdapter(new TaskAdapter.OnTaskActionListener() {
+        adapter = new TaskAdapter(userRole, chatLogin, new TaskAdapter.OnTaskActionListener() {
             @Override
-            public void onRespond(TaskInstanceDto instance, int position) {
-                instance.userLogin = chatLogin;
-                updateTaskInstance(instance); // Используем HTTP вместо WebSocket
+            public void onClaim(TaskInstanceDto instance, int position) {
+                // Ребенок берет задачу
+                instance.userLogin = userLogin;
+                updateTaskInstance(instance);
+            }
+
+            @Override
+            public void onComplete(TaskInstanceDto instance, int position) {
+                // Родитель подтверждает выполнение
+                patchTaskInstanceStatus(instance.instanceId, true);
             }
 
             @Override
@@ -137,7 +146,6 @@ public class TaskFragment extends Fragment {
                 );
                 currentDialog.show();
             }
-
         });
 
         recyclerTasks.setAdapter(adapter);
@@ -253,6 +261,35 @@ public class TaskFragment extends Fragment {
         });
 
         recyclerDays.setAdapter(dateAdapter);
+    }
+    private void patchTaskInstanceStatus(Long instanceId, boolean completed) {
+        String url = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/tasks/instance/" + instanceId + "/status";
+
+        Map<String, Boolean> payload = new HashMap<>();
+        payload.put("completed", completed);
+
+        String json = gson.toJson(payload);
+        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
+
+        Request req = new Request.Builder()
+                .url(url)
+                .patch(body)
+                .build();
+
+        httpClient.newCall(req).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                Log.e(TAG, "Failed to update task status", e);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (!response.isSuccessful()) {
+                    Log.e(TAG, "Status update error: " + response.code());
+                }
+                response.close();
+            }
+        });
     }
 
 

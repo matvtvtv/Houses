@@ -61,7 +61,8 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     implementation("androidx.activity:activity-ktx:1.8.0")
     implementation("de.hdodenhof:circleimageview:3.1.0")
-
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
     // annotation processors (если проект на Java)
     annotationProcessor(libs.lombok)
     annotationProcessor(libs.hilt.compiler)

@@ -25,21 +25,30 @@ import java.util.List;
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
 
     public interface OnTaskActionListener {
-        void onRespond(TaskInstanceDto task, int position);
-        void onOpenComments(TaskInstanceDto task, int position);
+
+            void onClaim(TaskInstanceDto task, int position);     // ребёнок берёт задачу
+            void onComplete(TaskInstanceDto task, int position);  // родитель подтверждает
+            void onOpenComments(TaskInstanceDto task, int position);
+
     }
 
 
     private final List<TaskInstanceDto> allItems = new ArrayList<>();
 
     private final List<TaskInstanceDto> visibleItems = new ArrayList<>();
+    public String currentUserRole;
+    public String currentUserLogin;
+
 
     private LocalDate selectedDate;
     private final OnTaskActionListener listener;
 
-    public TaskAdapter(OnTaskActionListener listener) {
+    public TaskAdapter(String userRole, String userLogin, OnTaskActionListener listener) {
+        this.currentUserRole = userRole;
+        this.currentUserLogin = userLogin;
         this.listener = listener;
     }
+
 
 
 
@@ -132,7 +141,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         // 2. Награда
         holder.money.setText(String.valueOf(t.money));
 
-        // 3. Комментарий (Проверьте ID tvComment в XML!)
+        // 3. Комментарий
         if (t.comment != null && !t.comment.isEmpty()) {
             holder.tvComment.setText(t.comment);
             holder.tvComment.setVisibility(View.VISIBLE);
@@ -140,7 +149,15 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
             holder.tvComment.setVisibility(View.GONE);
         }
 
-        // 4. Дни повтора
+        // 4. Кто начал выполнение
+        if (t.userLogin != null && !t.userLogin.isEmpty()) {
+            holder.tvStartedBy.setText("Выполняет: " + t.userLogin);
+            holder.tvStartedBy.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvStartedBy.setVisibility(View.GONE);
+        }
+
+        // 5. Дни повтора
         if (t.repeat && t.repeatDays != null && !t.repeatDays.isEmpty()) {
             holder.repeatDays.setText(String.join(", ", t.repeatDays).toUpperCase());
             holder.repeatDays.setVisibility(View.VISIBLE);
@@ -148,57 +165,76 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
             holder.repeatDays.setVisibility(View.GONE);
         }
 
-        // 5. Обработка ФОТО (Исправленная логика)
-        View parentScroll = (View) holder.photoContainer.getParent(); // Это наш HorizontalScrollView
-        holder.photoContainer.removeAllViews(); // Обязательно очищаем старые фото
+        // 6. Обработка ФОТО
+        View parentScroll = (View) holder.photoContainer.getParent();
+        holder.photoContainer.removeAllViews();
 
         if (t.photoBase64 != null && !t.photoBase64.isEmpty()) {
-            // Если фото есть — показываем и список, и скролл
             holder.photoContainer.setVisibility(View.VISIBLE);
             if (parentScroll != null) parentScroll.setVisibility(View.VISIBLE);
 
             for (String base64 : t.photoBase64) {
                 ImageView imageView = new ImageView(holder.itemView.getContext());
-
-                // Размер фото (например, 80dp)
                 int size = (int) (80 * holder.itemView.getResources().getDisplayMetrics().density);
                 LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
                 params.setMargins(0, 0, 16, 0);
                 imageView.setLayoutParams(params);
                 imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-
-                // Скругление (требует наличия bg_photo_rounding в drawable)
                 imageView.setClipToOutline(true);
                 imageView.setOutlineProvider(android.view.ViewOutlineProvider.BACKGROUND);
                 imageView.setBackgroundResource(R.drawable.bg_photo_rounding);
-
-                // Установка изображения
                 imageView.setImageBitmap(ImageUtils.base64ToBitmap(base64));
                 holder.photoContainer.addView(imageView);
             }
         } else {
-            // Если фото нет — полностью скрываем блок
             holder.photoContainer.setVisibility(View.GONE);
             if (parentScroll != null) parentScroll.setVisibility(View.GONE);
         }
 
-        // 6. Статус и Кнопки
+        // 7. Статус и Кнопки
         holder.cbCompleted.setChecked(t.completed);
         holder.itemView.setAlpha(t.completed ? 0.6f : 1.0f);
 
-        holder.btnRespond.setOnClickListener(v -> {
-            if (listener != null) listener.onRespond(t, holder.getBindingAdapterPosition());
-        });
+        holder.btnRespond.setVisibility(View.GONE); // Скрываем по умолчанию
+
+        if (!t.completed) {
+            if ("PARENT".equals(currentUserRole)) {
+                // Родитель видит кнопку "Подтвердить"
+                holder.btnRespond.setText("Подтвердить");
+                holder.btnRespond.setVisibility(View.VISIBLE);
+                holder.btnRespond.setEnabled(true);
+                holder.btnRespond.setOnClickListener(v -> {
+                    if (listener != null) listener.onComplete(t, position);
+                });
+            } else {
+                // Ребенок: логика взятия задачи
+                if (t.userLogin == null || t.userLogin.isEmpty()) {
+                    // Задача свободна
+                    holder.btnRespond.setText("Взять");
+                    holder.btnRespond.setVisibility(View.VISIBLE);
+                    holder.btnRespond.setEnabled(true);
+                    holder.btnRespond.setOnClickListener(v -> {
+                        if (listener != null) listener.onClaim(t, position);
+                    });
+                } else if (currentUserLogin.equals(t.userLogin)) {
+                    // Задача взята мной
+                    holder.btnRespond.setText("В процессе");
+                    holder.btnRespond.setVisibility(View.VISIBLE);
+                    holder.btnRespond.setEnabled(false);
+                } else {
+                    // Задача взята другим
+                    holder.btnRespond.setVisibility(View.GONE);
+                }
+            }
+        }
 
         holder.btnComments.setOnClickListener(v -> {
             if (listener != null) listener.onOpenComments(t, holder.getBindingAdapterPosition());
         });
     }
 
-
-
     static class VH extends RecyclerView.ViewHolder {
-        TextView title, desc, money, repeatDays, tvComment;
+        TextView title, desc, money, repeatDays, tvComment, tvStartedBy;
         CheckBox cbCompleted;
         Button btnRespond, btnComments;
         LinearLayout photoContainer;
@@ -213,8 +249,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
             btnRespond = itemView.findViewById(R.id.btnRespond);
             btnComments = itemView.findViewById(R.id.btnComments);
             tvComment = itemView.findViewById(R.id.tvComment);
+            tvStartedBy = itemView.findViewById(R.id.tvStartedBy);
             photoContainer = itemView.findViewById(R.id.photoContainer);
         }
     }
-
 }

@@ -144,8 +144,6 @@ public class ChatMessageFragment extends Fragment {
             // используем статический класс MessageDTO из StompClient
             StompClient.MessageDTO payload = new StompClient.MessageDTO(login, text, avatarBase64);
             stompClient.send("/app/chat/" + chatLogin + "/send", payload);
-
-            stompClient.send("/app/chat/" + chatLogin + "/send", payload);
             editMessage.setText("");
         });
 
