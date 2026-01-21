@@ -7,10 +7,11 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="12dp"
-    android:background="@color/light_grey"
+    android:background="@drawable/iphone_16_pro___1"
     android:focusableInTouchMode="true"
     android:clickable="true"
     android:focusable="true"
+
     android:fitsSystemWindows="true">
 
     <!-- Верхняя панель: кнопка + текст -->

@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/iphone_16_pro___1"
+    android:background="@drawable/iphone_16_pro___2"
 
     android:padding="20dp">
 
@@ -17,7 +17,7 @@
             android:id="@+id/etName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Name"
+            android:hint="Имя"
             android:textColorHint="@color/white"
             android:textColor="@android:color/white"
             android:background="@drawable/edit_text_underline"
@@ -31,7 +31,7 @@
             android:id="@+id/etLogin"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Login"
+            android:hint="Логин"
             android:textColorHint="@color/white"
             android:textColor="@android:color/white"
             android:textCursorDrawable="@null"
@@ -51,7 +51,7 @@
                 android:id="@+id/etPassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Password"
+                android:hint="Пароль"
                 android:inputType="textPassword"
                 android:textColor="@android:color/white"
                 android:textColorHint="@android:color/white"
@@ -73,7 +73,7 @@
                 android:id="@+id/etPasswordСonfirmation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Confirm  password"
+                android:hint="Подтвердите пароль"
                 android:inputType="textPassword"
                 android:textColor="@android:color/white"
                 android:textColorHint="@android:color/white"
@@ -86,7 +86,7 @@
 
         <!-- ROLE TITLE -->
         <TextView
-            android:text="Choose role"
+            android:text="Выберите роль"
             android:textStyle="bold"
             android:textSize="16sp"
             android:layout_width="match_parent"
@@ -108,7 +108,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:text="Parent"
+                android:text="Родитель"
                 android:textColor="@android:color/white"
                 app:buttonTint="@color/radio_button_tint"
                 android:background="@drawable/bg_radio_text"/>
@@ -117,7 +117,7 @@
                 android:id="@+id/rbChild"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Child"
+                android:text="Ребенок"
                 android:textColor="@android:color/white"
                 app:buttonTint="@color/radio_button_tint"
                 android:background="@drawable/bg_radio_text"/>
@@ -128,7 +128,7 @@
             android:id="@+id/btnRegister"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="Register"
+            android:text="Регистрация"
             android:textAllCaps="false"
             android:layout_marginBottom="12dp"
             android:textColor="@android:color/white"
@@ -140,7 +140,7 @@
             android:id="@+id/btnEnterance"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="Enter"
+            android:text="Вход"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
             app:cornerRadius="12dp"

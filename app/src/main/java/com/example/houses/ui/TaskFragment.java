@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.text.Layout;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -91,8 +92,8 @@ public class TaskFragment extends Fragment {
     private ImageView btnCreate;
     private ActivityResultLauncher<String> pickPhotoLauncher;
     private CommentPhotoDialog currentDialog;
-
-    private TextView text;
+    private View  rootLayout;
+    private TextView textView;
 
     public TaskFragment() {}
 
@@ -115,9 +116,17 @@ public class TaskFragment extends Fragment {
         loadTasksRange(chatLogin, LocalDate.now(), LocalDate.now().plusDays(13));
 
         recyclerTasks = view.findViewById(R.id.recyclerTasks);
+        rootLayout = view.findViewById(R.id.rootLayout);
+        textView = view.findViewById(R.id.textView);
+        textView.setText("логин группы: "+ chatLogin);
         recyclerTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
         btnCreate = view.findViewById(R.id.btnCreateTask);
-
+        if(userRole.equals("CHILD")){
+            rootLayout.setBackgroundResource(R.drawable.iphone_16_pro___1);
+        }
+        else {
+            rootLayout.setBackgroundResource(R.drawable.iphone_16_pro___3);
+        }
         adapter = new TaskAdapter(userRole, chatLogin, new TaskAdapter.OnTaskActionListener() {
             @Override
             public void onClaim(TaskInstanceDto instance, int position) {

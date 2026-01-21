@@ -14,7 +14,7 @@
         android:id="@+id/etChatLogin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Chat login"
+        android:hint="Логин группы"
         android:textColor="@android:color/white"
         android:textColorHint="@color/white"
         android:background="@drawable/edit_text_underline"
@@ -26,7 +26,7 @@
     <!-- JOIN BUTTON -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnJoin"
-        android:text="Join chat"
+        android:text="Присоединиться к группе"
         android:textAllCaps="false"
         android:textColor="@android:color/white"
         app:cornerRadius="12dp"
