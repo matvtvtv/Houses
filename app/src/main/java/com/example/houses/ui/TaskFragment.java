@@ -130,7 +130,11 @@ public class TaskFragment extends Fragment {
         textView.setText("логин группы: " + chatLogin);
         recyclerTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
         btnCreate = view.findViewById(R.id.btnCreateTask);
-
+        if(userRole.equals("CHILD")) {
+            btnCreate.setVisibility(View.GONE);
+        } else {
+            btnCreate.setVisibility(View.VISIBLE);
+        }
         adapter = new TaskAdapter(userRole, userLogin, new TaskAdapter.OnTaskActionListener() {
             @Override
             public void onClaim(TaskInstanceDto instance, int position) {
