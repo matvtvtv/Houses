@@ -2,10 +2,22 @@
 <resources>
 
     <style name="CircleImageView">
-    <item name="cornerFamily">rounded</item>
-    <item name="cornerSize">50%</item>
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
     </style>
+
     <style name="WhiteHintText" parent="TextAppearance.MaterialComponents.Subtitle2">
         <item name="android:textColor">@android:color/white</item>
     </style>
+
+    <style name="BottomNavActiveIndicator">
+        <item name="android:background">@drawable/bottom_nav_active_bg</item>
+    </style>
+
+
+
+    <style name="ShapeAppearance.Indicator" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerSize">8dp</item>
+    </style>
+
 </resources>

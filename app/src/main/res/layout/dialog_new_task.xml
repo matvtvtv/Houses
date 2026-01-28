@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/scrollView"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_dialog_corners"
@@ -65,7 +66,7 @@
             android:hint="Награда (монеты)"
             android:textColorHint="#9A9A9A"
             app:hintTextColor="#8E54E9"
-            android:layout_marginBottom="24dp">
+            android:layout_marginBottom="16dp">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editTaskMoney"
@@ -75,69 +76,6 @@
                 android:inputType="number" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="#1E1E24"
-            app:strokeWidth="0dp"
-            android:layout_marginBottom="24dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="12dp"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@android:drawable/ic_menu_my_calendar"
-                    app:tint="#8E54E9"/>
-
-                <TextView
-                    android:id="@+id/tvStartDate"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="12dp"
-                    android:text="Сегодня"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnPickDate"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Изменить"
-                    android:textColor="#8E54E9"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Повторять по дням"
-            android:textColor="#9A9A9A"
-            android:layout_marginBottom="8dp"/>
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupDays"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:chipSpacingHorizontal="4dp">
-
-            <com.google.android.material.chip.Chip android:id="@+id/chipMon" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Пн" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipTue" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Вт" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipWed" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Ср" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipThu" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Чт" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipFri" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Пт" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipSat" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Сб" />
-            <com.google.android.material.chip.Chip android:id="@+id/chipSun" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Вс" />
-        </com.google.android.material.chip.ChipGroup>
-
         <TextView
             android:id="@+id/tvToggleExtra"
             android:layout_width="match_parent"
@@ -146,7 +84,10 @@
             android:textColor="#8E54E9"
             android:textStyle="bold"
             android:padding="8dp"
-            android:layout_marginTop="16dp"/>
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground"/>
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardExtra"
@@ -155,6 +96,7 @@
             android:visibility="gone"
             app:cardCornerRadius="16dp"
             app:cardBackgroundColor="#1E1E24"
+            app:strokeWidth="0dp"
             android:layout_marginBottom="24dp">
 
             <LinearLayout
@@ -162,6 +104,76 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Дата старта"
+                    android:textColor="#9A9A9A"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="4dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_menu_my_calendar"
+                        app:tint="#8E54E9"/>
+
+                    <TextView
+                        android:id="@+id/tvStartDate"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:text="Сегодня"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPickDate"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Изменить"
+                        android:textColor="#8E54E9" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Повторять по дням"
+                    android:textColor="#9A9A9A"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupDays"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:chipSpacingHorizontal="4dp">
+
+                    <com.google.android.material.chip.Chip android:id="@+id/chipMon" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Пн" />
+                    <com.google.android.material.chip.Chip android:id="@+id/chipTue" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Вт" />
+                    <com.google.android.material.chip.Chip android:id="@+id/chipWed" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Ср" />
+                    <com.google.android.material.chip.Chip android:id="@+id/chipThu" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Чт" />
+                    <com.google.android.material.chip.Chip android:id="@+id/chipFri" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Пт" />
+                    <com.google.android.material.chip.Chip android:id="@+id/chipSat" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Сб" />
+                    <com.google.android.material.chip.Chip android:id="@+id/chipSun" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Вс" />
+                </com.google.android.material.chip.ChipGroup>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#33FFFFFF"
+                    android:layout_marginBottom="16dp"/>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnStartTime"
@@ -176,22 +188,44 @@
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
                     android:text="Конец: не выбрано"
                     android:textColor="#FFFFFF"/>
 
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Период дня" android:textColor="#9A9A9A" android:layout_marginTop="8dp"/>
                 <RadioGroup android:id="@+id/rgPartDay" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                    <RadioButton android:id="@+id/rbMorning" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Утро" android:textColor="#FFFFFF"/>
-                    <RadioButton android:id="@+id/rbDay" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="День" android:textColor="#FFFFFF"/>
-                    <RadioButton android:id="@+id/rbEvening" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Вечер" android:textColor="#FFFFFF"/>
+                    <RadioButton android:id="@+id/rbMorning" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Утро" android:textColor="#FFFFFF" android:buttonTint="#8E54E9"/>
+                    <RadioButton android:id="@+id/rbDay" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="День" android:textColor="#FFFFFF" android:buttonTint="#8E54E9"/>
+                    <RadioButton android:id="@+id/rbEvening" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Вечер" android:textColor="#FFFFFF" android:buttonTint="#8E54E9"/>
                 </RadioGroup>
 
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Важность" android:textColor="#9A9A9A" android:layout_marginTop="8dp"/>
                 <RadioGroup android:id="@+id/rgImportance" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                    <RadioButton android:id="@+id/rbImp1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1" android:textColor="#FFFFFF"/>
-                    <RadioButton android:id="@+id/rbImp2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="2" android:textColor="#FFFFFF"/>
-                    <RadioButton android:id="@+id/rbImp3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="3" android:textColor="#FFFFFF"/>
+                    <RadioButton android:id="@+id/rbImp1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1" android:textColor="#FFFFFF" android:buttonTint="#8E54E9"/>
+                    <RadioButton android:id="@+id/rbImp2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="2" android:textColor="#FFFFFF" android:buttonTint="#8E54E9"/>
+                    <RadioButton android:id="@+id/rbImp3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="3" android:textColor="#FFFFFF" android:buttonTint="#8E54E9"/>
                 </RadioGroup>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"
+                    android:hint="Назначить пользователю"
+                    android:textColorHint="#9A9A9A"
+                    app:hintTextColor="#8E54E9"
+                    app:boxStrokeColor="#8E54E9">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/spinnerTargetUser"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:textColor="#FFFFFF"
+                        android:padding="16dp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -201,7 +235,8 @@
             android:layout_height="56dp"
             android:text="Создать задачу"
             app:cornerRadius="16dp"
-            android:backgroundTint="#8E54E9"/>
+            android:backgroundTint="#8E54E9"
+            android:textColor="#FFFFFF"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancelTask"

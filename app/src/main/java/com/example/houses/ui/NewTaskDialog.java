@@ -1,5 +1,8 @@
 package com.example.houses.ui;
 
+import static androidx.core.content.ContextCompat.getSystemService;
+
+import android.annotation.SuppressLint;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
 import android.app.TimePickerDialog;
@@ -8,12 +11,18 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.RadioGroup;
+import android.widget.ScrollView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.widget.NestedScrollView;
 
 import com.example.houses.R;
+import com.example.houses.model.ChatData;
 import com.example.houses.model.Task;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
@@ -23,15 +32,22 @@ import android.widget.TextView;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class NewTaskDialog extends Dialog {
 
     private TextInputEditText editTitle, editDesc, editMoney;
     private MaterialButton btnCreate, btnCancel, btnPickDate;
     private TextView tvStartDate;
-    // Заменяем CheckBox на Chip
     private Chip chipMon, chipTue, chipWed, chipThu, chipFri, chipSat, chipSun;
+
+    // Новые поля для выбора пользователя
+    private AutoCompleteTextView spinnerTargetUser;
+    private Map<String, String> userLoginMap = new HashMap<>();
+    private List<ChatData> chatUsers = new ArrayList<>();
+    private String selectedTargetLogin = null;
 
     private final String chatLogin;
     private final NewTaskListener listener;
@@ -42,10 +58,10 @@ public class NewTaskDialog extends Dialog {
     private MaterialButton btnStartTime, btnEndTime;
     private TextView tvToggleExtra;
     private View cardExtra;
+    private NestedScrollView scrollView;
 
     private String startTime = null;
     private String endTime = null;
-
 
     public interface NewTaskListener {
         void onTaskCreated(Task task);
@@ -57,6 +73,15 @@ public class NewTaskDialog extends Dialog {
         this.listener = listener;
     }
 
+    // Метод для установки списка пользователей (вызвать перед show())
+    public void setChatUsers(List<ChatData> users) {
+        this.chatUsers = users != null ? users : new ArrayList<>();
+        if (spinnerTargetUser != null) {
+            setupUserSpinner();
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -66,11 +91,12 @@ public class NewTaskDialog extends Dialog {
         editTitle = findViewById(R.id.editTaskTitle);
         editDesc = findViewById(R.id.editTaskDesc);
         editMoney = findViewById(R.id.editTaskMoney);
+        scrollView = findViewById(R.id.scrollView);
 
         tvStartDate = findViewById(R.id.tvStartDate);
         btnPickDate = findViewById(R.id.btnPickDate);
 
-        // Инициализация Чипсов (Chips)
+        // Инициализация Чипсов
         chipMon = findViewById(R.id.chipMon);
         chipTue = findViewById(R.id.chipTue);
         chipWed = findViewById(R.id.chipWed);
@@ -81,6 +107,16 @@ public class NewTaskDialog extends Dialog {
 
         btnCreate = findViewById(R.id.btnCreateTask);
         btnCancel = findViewById(R.id.btnCancelTask);
+
+        // Инициализация спиннера пользователей
+        spinnerTargetUser = findViewById(R.id.spinnerTargetUser);
+        setupUserSpinner();
+
+        // Обработчик выбора пользователя
+        spinnerTargetUser.setOnItemClickListener((parent, view, position, id) -> {
+            String selectedDisplay = (String) parent.getItemAtPosition(position);
+            selectedTargetLogin = userLoginMap.get(selectedDisplay);
+        });
 
         // Выбор даты
         btnPickDate.setOnClickListener(v -> {
@@ -100,6 +136,7 @@ public class NewTaskDialog extends Dialog {
                 dismiss();
             }
         });
+
         tvToggleExtra = findViewById(R.id.tvToggleExtra);
         cardExtra = findViewById(R.id.cardExtra);
 
@@ -115,6 +152,7 @@ public class NewTaskDialog extends Dialog {
                 tvToggleExtra.setText("Дополнительные параметры ▾");
             }
         });
+
         btnStartTime.setOnClickListener(v -> {
             TimePickerDialog tp = new TimePickerDialog(getContext(),
                     (view, hour, minute) -> {
@@ -132,10 +170,45 @@ public class NewTaskDialog extends Dialog {
                     }, 22, 0, true);
             tp.show();
         });
-
+        scrollView.setOnTouchListener((v, event) -> {
+            hideKeyboard(); // скрываем клавиатуру при любом касании/движении
+            return false; // возвращаем false, чтобы скролл всё равно работал
+        });
 
     }
 
+    private void setupUserSpinner() {
+        if (spinnerTargetUser == null) return;
+
+        List<String> displayNames = new ArrayList<>();
+        userLoginMap.clear();
+
+        // Опция "Не назначено" (доступно всем)
+        displayNames.add("Любой (не назначено)");
+        userLoginMap.put("Любой (не назначено)", null);
+
+        for (ChatData user : chatUsers) {
+            // Фильтруем: показываем только CHILD
+            if ("CHILD".equals(user.getUserRole())) {
+                String display = user.getUserLogin() + " 👶";
+                displayNames.add(display);
+                userLoginMap.put(display, user.getUserLogin());
+            }
+        }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                getContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                displayNames
+        );
+        spinnerTargetUser.setAdapter(adapter);
+
+        // Опционально: если нет детей, можно скрыть спиннер или показать сообщение
+        if (displayNames.size() == 1) { // Только "Любой", детей нет
+            // spinnerTargetUser.setEnabled(false); // Заблокировать выбор
+            // или просто оставить только опцию "Любой"
+        }
+    }
     private boolean validateAndCreate() {
         String title = editTitle.getText().toString().trim();
         String desc = editDesc.getText().toString().trim();
@@ -160,11 +233,15 @@ public class NewTaskDialog extends Dialog {
         task.setDescription(desc);
         task.setMoney(money);
         task.setCompleted(false);
+
         // Время доступности
         task.setStartTime(startTime);
         task.setEndTime(endTime);
 
-            // Период дня
+        // Назначенный пользователь (target)
+        task.setTargetLogin(selectedTargetLogin);
+
+        // Период дня
         RadioGroup rgPartDay = findViewById(R.id.rgPartDay);
         int pdId = rgPartDay.getCheckedRadioButtonId();
         if (pdId == R.id.rbMorning) task.setPartDay("MORNING");
@@ -177,7 +254,8 @@ public class NewTaskDialog extends Dialog {
         if (impId == R.id.rbImp1) task.setImportance(1);
         else if (impId == R.id.rbImp2) task.setImportance(2);
         else if (impId == R.id.rbImp3) task.setImportance(3);
-        else task.setImportance(1); // дефолт
+        else task.setImportance(1);
+
         // Сбор выбранных дней через Чипсы
         List<String> daysList = new ArrayList<>();
         if (chipMon.isChecked()) daysList.add("MONDAY");
@@ -203,17 +281,27 @@ public class NewTaskDialog extends Dialog {
         if (listener != null) listener.onTaskCreated(task);
         return true;
     }
+    private void hideKeyboard() {
+        if (getWindow() == null) return;
+
+        InputMethodManager imm =
+                (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+
+        if (imm == null) return;
+
+        View view = getWindow().getDecorView();
+        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+    }
+
 
     @Override
     protected void onStart() {
         super.onStart();
         if (getWindow() != null) {
-            // Делаем диалог на всю ширину для красоты Material Design
             getWindow().setLayout(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
             );
-            // Убираем стандартный фон диалога, чтобы были видны наши скругления
             getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
     }

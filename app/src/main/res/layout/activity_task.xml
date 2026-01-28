@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="12dp"
-    android:background="@drawable/bg_day_item"
+    android:background="@color/bg"
     android:focusableInTouchMode="true"
     android:clickable="true"
     android:focusable="true"

@@ -1,5 +1,7 @@
 package com.example.houses.adapter;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -84,8 +86,18 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         for (TaskInstanceDto t : allItems) {
             Log.d(TAG, "Task data: startTime=" + t.startTime +
                     ", endTime=" + t.endTime +
-                    ", partDay=" + t.partDay);
-            // 1. Дата
+                    ", partDay=" + t.partDay +
+                    ", targetLogin=" + t.targetLogin);
+
+            // 1. ФИЛЬТР ПО targetLogin (строгое правило)
+            if (t.targetLogin != null && !t.targetLogin.isEmpty()) {
+                if (!t.targetLogin.equals(currentUserLogin)) {
+                    continue; // задача НЕ для этого пользователя
+                }
+            }
+
+
+            // 2. Дата
             if (selectedDate != null && t.taskDate != null) {
                 try {
                     LocalDate taskDate = LocalDate.parse(t.taskDate);
@@ -95,23 +107,16 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
                 }
             }
 
-            // 2. Время
+            // 3. Время
             if (!isTimeInRange(t.startTime, t.endTime)) continue;
 
-            // 3. Период дня
+            // 4. Период дня
             if (!matchesPartDay(t.partDay)) continue;
 
             visibleItems.add(t);
         }
 
         notifyDataSetChanged();
-    }
-
-    /**
-     * Принудительно пересчитать фильтр (внешний вызов из фрагмента)
-     */
-    public void refresh() {
-        applyFilter();
     }
 
     private boolean isTimeInRange(String start, String end) {
@@ -143,6 +148,11 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
             return true; // При ошибке парсинга показываем на всякий случай
         }
     }
+
+    public void refresh() {
+        applyFilter();
+    }
+
     private boolean matchesPartDay(String partDay) {
         if (partDay == null) return true;
 
@@ -156,10 +166,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         }
     }
 
-    /**
-     * Возвращает миллисекунды до ближайшего изменения видимости (следующий startTime или endTime),
-     * или -1 если ничего подходящего не найдено.
-     */
     public long getMillisUntilNextTimeThreshold() {
         try {
             java.time.LocalTime now = java.time.LocalTime.now();
@@ -243,6 +249,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         } else {
             holder.tvComment.setVisibility(View.GONE);
         }
+
+        // ===== Время / Часть дня =====
         StringBuilder timeBuilder = new StringBuilder();
         if (t.startTime != null && !t.startTime.isEmpty()) {
             timeBuilder.append(t.startTime);
@@ -256,6 +264,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
             timeBuilder.append(t.endTime);
         }
 
+        // Если времени нет, но есть часть дня
         if (timeBuilder.length() == 0 && t.partDay != null && !t.partDay.isEmpty()) {
             switch (t.partDay) {
                 case "MORNING": timeBuilder.append("☀️ Утро (6:00-12:00)"); break;
@@ -272,13 +281,14 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
             holder.tvTaskTime.setVisibility(View.GONE);
         }
 
-
+        // ===== Кто выполняет =====
         if (t.userLogin != null && !t.userLogin.isEmpty()) {
             holder.tvStartedBy.setText("Выполняет: " + t.userLogin);
             holder.tvStartedBy.setVisibility(View.VISIBLE);
         } else {
             holder.tvStartedBy.setVisibility(View.GONE);
         }
+
 
         // ===== Дни повтора =====
         if (t.repeat && t.repeatDays != null && !t.repeatDays.isEmpty()) {
@@ -315,21 +325,27 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         holder.btnRespond.setVisibility(View.GONE);
 
         if (!t.completed) {
-            if ("PARENT".equals(currentUserRole) ||  "ADMIN".equals(currentUserRole)) {
+            if ("PARENT".equals(currentUserRole) || "ADMIN".equals(currentUserRole)) {
                 holder.btnRespond.setText("Подтвердить");
                 holder.btnRespond.setVisibility(View.VISIBLE);
                 holder.btnRespond.setOnClickListener(v ->
                         listener.onComplete(t, position));
             } else {
-                if (t.userLogin == null || t.userLogin.isEmpty()) {
-                    holder.btnRespond.setText("Взять");
-                    holder.btnRespond.setVisibility(View.VISIBLE);
-                    holder.btnRespond.setOnClickListener(v ->
-                            listener.onClaim(t, position));
-                } else if (currentUserLogin.equals(t.userLogin)) {
-                    holder.btnRespond.setText("В процессе");
-                    holder.btnRespond.setVisibility(View.VISIBLE);
-                    holder.btnRespond.setEnabled(false);
+                // Для обычных пользователей - проверяем, назначена ли задача им
+                boolean isMyTask = (t.targetLogin == null || t.targetLogin.isEmpty())
+                        || t.targetLogin.equals(currentUserLogin);
+
+                if (isMyTask) {
+                    if (t.userLogin == null || t.userLogin.isEmpty()) {
+                        holder.btnRespond.setText("Взять");
+                        holder.btnRespond.setVisibility(View.VISIBLE);
+                        holder.btnRespond.setOnClickListener(v ->
+                                listener.onClaim(t, position));
+                    } else if (currentUserLogin.equals(t.userLogin)) {
+                        holder.btnRespond.setText("В процессе");
+                        holder.btnRespond.setVisibility(View.VISIBLE);
+                        holder.btnRespond.setEnabled(false);
+                    }
                 }
             }
         }
@@ -341,7 +357,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
     // ================== VIEW HOLDER ==================
 
     static class VH extends RecyclerView.ViewHolder {
-        TextView title, desc, money, repeatDays, tvComment, tvStartedBy,tvTaskTime;
+        TextView title, desc, money, repeatDays, tvComment, tvStartedBy, tvTaskTime;
         CheckBox cbCompleted;
         Button btnRespond, btnComments;
         LinearLayout photoContainer;
@@ -358,8 +374,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
             tvComment = v.findViewById(R.id.tvComment);
             tvStartedBy = v.findViewById(R.id.tvStartedBy);
             photoContainer = v.findViewById(R.id.photoContainer);
-            tvTaskTime = v.findViewById(R.id.tvTaskTime); // добавьте эту строку
-
+            tvTaskTime = v.findViewById(R.id.tvTaskTime);
         }
     }
 }

@@ -14,11 +14,13 @@ public class TaskForegroundServiceHolder {
     private static final String TAG = "TaskFGServiceHolder";
 
     private static TaskForegroundService serviceInstance;
+    public static TaskForegroundService hService; // Добавлено для совместимости с фрагментом
     private static final List<TaskInstanceDto> pending = new ArrayList<>();
 
     public static synchronized void setService(TaskForegroundService service) {
         Log.d(TAG, "setService -> service set");
         serviceInstance = service;
+        hService = service; // Обновляем публичное поле
         if (serviceInstance != null && !pending.isEmpty()) {
             for (TaskInstanceDto t : pending) {
                 serviceInstance.enqueueTask(t);
@@ -30,6 +32,7 @@ public class TaskForegroundServiceHolder {
     public static synchronized void clearService() {
         Log.d(TAG, "clearService -> service cleared");
         serviceInstance = null;
+        hService = null; // Очищаем публичное поле
     }
 
     public static synchronized void enqueue(TaskInstanceDto instance, Context context) {

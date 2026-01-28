@@ -66,7 +66,7 @@ dependencies {
     // annotation processors (если проект на Java)
     annotationProcessor(libs.lombok)
     annotationProcessor(libs.hilt.compiler)
-
+    implementation("com.google.android.material:material:1.9.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
