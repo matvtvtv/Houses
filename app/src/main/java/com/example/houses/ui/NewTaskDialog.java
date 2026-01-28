@@ -2,10 +2,13 @@ package com.example.houses.ui;
 
 import android.app.DatePickerDialog;
 import android.app.Dialog;
+import android.app.TimePickerDialog;
 import android.content.Context;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -36,6 +39,13 @@ public class NewTaskDialog extends Dialog {
     private LocalDate selectedDate = null;
     private static final DateTimeFormatter FORMATTER_RU = DateTimeFormatter.ofPattern("d MMMM yyyy");
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE;
+    private MaterialButton btnStartTime, btnEndTime;
+    private TextView tvToggleExtra;
+    private View cardExtra;
+
+    private String startTime = null;
+    private String endTime = null;
+
 
     public interface NewTaskListener {
         void onTaskCreated(Task task);
@@ -90,6 +100,40 @@ public class NewTaskDialog extends Dialog {
                 dismiss();
             }
         });
+        tvToggleExtra = findViewById(R.id.tvToggleExtra);
+        cardExtra = findViewById(R.id.cardExtra);
+
+        btnStartTime = findViewById(R.id.btnStartTime);
+        btnEndTime = findViewById(R.id.btnEndTime);
+
+        tvToggleExtra.setOnClickListener(v -> {
+            if (cardExtra.getVisibility() == View.GONE) {
+                cardExtra.setVisibility(View.VISIBLE);
+                tvToggleExtra.setText("Дополнительные параметры ▴");
+            } else {
+                cardExtra.setVisibility(View.GONE);
+                tvToggleExtra.setText("Дополнительные параметры ▾");
+            }
+        });
+        btnStartTime.setOnClickListener(v -> {
+            TimePickerDialog tp = new TimePickerDialog(getContext(),
+                    (view, hour, minute) -> {
+                        startTime = String.format("%02d:%02d", hour, minute);
+                        btnStartTime.setText("Начало: " + startTime);
+                    }, 8, 0, true);
+            tp.show();
+        });
+
+        btnEndTime.setOnClickListener(v -> {
+            TimePickerDialog tp = new TimePickerDialog(getContext(),
+                    (view, hour, minute) -> {
+                        endTime = String.format("%02d:%02d", hour, minute);
+                        btnEndTime.setText("Конец: " + endTime);
+                    }, 22, 0, true);
+            tp.show();
+        });
+
+
     }
 
     private boolean validateAndCreate() {
@@ -116,7 +160,24 @@ public class NewTaskDialog extends Dialog {
         task.setDescription(desc);
         task.setMoney(money);
         task.setCompleted(false);
+        // Время доступности
+        task.setStartTime(startTime);
+        task.setEndTime(endTime);
 
+            // Период дня
+        RadioGroup rgPartDay = findViewById(R.id.rgPartDay);
+        int pdId = rgPartDay.getCheckedRadioButtonId();
+        if (pdId == R.id.rbMorning) task.setPartDay("MORNING");
+        else if (pdId == R.id.rbDay) task.setPartDay("DAY");
+        else if (pdId == R.id.rbEvening) task.setPartDay("EVENING");
+
+        // Важность
+        RadioGroup rgImportance = findViewById(R.id.rgImportance);
+        int impId = rgImportance.getCheckedRadioButtonId();
+        if (impId == R.id.rbImp1) task.setImportance(1);
+        else if (impId == R.id.rbImp2) task.setImportance(2);
+        else if (impId == R.id.rbImp3) task.setImportance(3);
+        else task.setImportance(1); // дефолт
         // Сбор выбранных дней через Чипсы
         List<String> daysList = new ArrayList<>();
         if (chipMon.isChecked()) daysList.add("MONDAY");

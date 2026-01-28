@@ -57,6 +57,8 @@ public class MainActivity extends AppCompatActivity {
             editor.apply();
         } else if (login.equals("1")) {
             startActivity(new Intent(this, RegistrationActivity.class));
+
+
         }
 
         Intent serviceIntent = new Intent(this, NotificationForegroundService.class);

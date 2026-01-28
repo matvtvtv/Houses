@@ -58,6 +58,7 @@ public class RegistrationActivity extends AppCompatActivity {
 
         rgRole = findViewById(R.id.rgRole);
         RadioButton rb = findViewById(R.id.rbParent);
+        RadioButton rbEN = findViewById(R.id.rbEn);
         ColorStateList csl = AppCompatResources.getColorStateList(this, R.color.radio_button_tint);
         CompoundButtonCompat.setButtonTintList(rb, csl);
 
@@ -98,6 +99,8 @@ public class RegistrationActivity extends AppCompatActivity {
 
         String role;
         if (selectedId == R.id.rbParent) {
+            role = "ADMIN";
+        } else if (selectedId == R.id.rbEn) {
             role = "PARENT";
         } else {
             role = "CHILD";
@@ -144,11 +147,17 @@ public class RegistrationActivity extends AppCompatActivity {
                         Toast.makeText(RegistrationActivity.this,
                                 role,
                                 Toast.LENGTH_SHORT).show();
-                            if (role.equals("PARENT")){
+                            if (role.equals("ADMIN")){
                                 startActivity(new Intent(RegistrationActivity.this, CreateChatActivity.class));
-                            }
-                            else{
+                                finish();
+                            } else if (role.equals("PARENT")) {
                                 startActivity(new Intent(RegistrationActivity.this, JoinChatActivity.class));
+                                finish();
+
+                            } else{
+                                startActivity(new Intent(RegistrationActivity.this, JoinChatActivity.class));
+                                finish();
+
                             }
 
                         finish();

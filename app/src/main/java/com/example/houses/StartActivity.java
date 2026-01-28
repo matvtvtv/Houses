@@ -25,6 +25,7 @@ public class StartActivity extends AppCompatActivity {
         });
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             startActivity(new Intent(this, MainActivity.class));
+            finish();
         }, 1000); // 2 секунды
 
     }

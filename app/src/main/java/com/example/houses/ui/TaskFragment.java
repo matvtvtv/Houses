@@ -62,6 +62,9 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
+import android.os.Handler;
+import android.os.Looper;
+
 public class TaskFragment extends Fragment {
 
     private static final String TAG = "TaskFragment";
@@ -94,6 +97,12 @@ public class TaskFragment extends Fragment {
     private CommentPhotoDialog currentDialog;
     private View  rootLayout;
     private TextView textView;
+    private Handler refreshHandler;
+    // NOTE: refreshRunnable kept for backward compatibility with your earlier code;
+    // the scheduling now uses scheduledRefreshRunnable.
+    private Runnable refreshRunnable;
+    private Runnable scheduledRefreshRunnable;
+    private static final long REFRESH_INTERVAL_MS = 60_000L; // 60 секунд (резервный показ)
 
     public TaskFragment() {}
 
@@ -183,6 +192,9 @@ public class TaskFragment extends Fragment {
                 requireActivity().runOnUiThread(() -> {
                     adapter.addOrUpdate(instanceDto);
 
+                    // после обновления данных пересчитываем ближайший таймер
+                    scheduleSmartRefresh();
+
                     boolean isMyTask = chatLogin.equals(instanceDto.userLogin);
                     if (!isMyTask) {
                         TaskForegroundServiceHolder.enqueue(instanceDto, requireContext());
@@ -197,6 +209,12 @@ public class TaskFragment extends Fragment {
         });
 
         stompClient.connect();
+
+        // Инициализируем Handler (используется для smart scheduling)
+        refreshHandler = new Handler(Looper.getMainLooper());
+
+        // опционально: можно вызвать scheduleSmartRefresh() сразу — он корректно обработает пустой адаптер
+        scheduleSmartRefresh();
     }
 
     private void loadTasksRange(String chatLogin, LocalDate from, LocalDate to) {
@@ -217,7 +235,11 @@ public class TaskFragment extends Fragment {
                 Type listType = new TypeToken<List<TaskInstanceDto>>(){}.getType();
                 final List<TaskInstanceDto> list = gson.fromJson(body, listType);
                 if (list == null) return;
-                requireActivity().runOnUiThread(() -> adapter.setAll(list));
+                requireActivity().runOnUiThread(() -> {
+                    adapter.setAll(list);
+                    // после загрузки истории — пересчитать таймер
+                    scheduleSmartRefresh();
+                });
             }
         });
     }
@@ -254,7 +276,48 @@ public class TaskFragment extends Fragment {
         });
     }
 
+    /**
+     * Планирует одноразовый апдейт адаптера в ближайший момент, когда сменится видимость по времени.
+     * Отменяет предыдущий запланированный runnable (если был) и ставит новый.
+     * Если ближайшего времени нет, ставим резервный таймер на REFRESH_INTERVAL_MS.
+     */
+    private void scheduleSmartRefresh() {
+        if (refreshHandler == null) refreshHandler = new Handler(Looper.getMainLooper());
+        // отменим предыдущий
+        if (scheduledRefreshRunnable != null) {
+            refreshHandler.removeCallbacks(scheduledRefreshRunnable);
+            scheduledRefreshRunnable = null;
+        }
 
+        if (adapter == null) return;
+
+        long delay = adapter.getMillisUntilNextTimeThreshold();
+        if (delay <= 0) {
+            // ничего ближайшего — ставим резервный таймер, чтобы хотя бы раз в минуту проверять
+            delay = REFRESH_INTERVAL_MS;
+        }
+
+        scheduledRefreshRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (adapter != null) {
+                    adapter.refresh();
+                }
+                // После выполнения — планируем следующий таймер рекурсивно
+                scheduleSmartRefresh();
+            }
+        };
+
+        refreshHandler.postDelayed(scheduledRefreshRunnable, delay);
+        Log.d(TAG, "Scheduled smart refresh in ms: " + delay);
+    }
+
+    private void cancelSmartRefresh() {
+        if (refreshHandler != null && scheduledRefreshRunnable != null) {
+            refreshHandler.removeCallbacks(scheduledRefreshRunnable);
+            scheduledRefreshRunnable = null;
+        }
+    }
 
     private void initDaysList() {
         List<DayItem> days = new ArrayList<>();
@@ -315,6 +378,9 @@ public class TaskFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        // отменяем любой запланированный smart-таймер
+        cancelSmartRefresh();
+
         if (stompClient != null) {
             stompClient.disconnect();
             stompClient = null;

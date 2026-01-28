@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="12dp"
-    android:background="@drawable/iphone_16_pro___1"
+    android:background="@drawable/bg_day_item"
     android:focusableInTouchMode="true"
     android:clickable="true"
     android:focusable="true"

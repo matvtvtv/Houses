@@ -28,6 +28,11 @@ public class TaskInstanceDto {
     public String targetLogin;
     public boolean repeat;
     public List<String> repeatDays;
+    public String startTime;
+    public String endTime;
+    public String partDay;
+    public int importance;
+
     public String templateUserLogin;
 
     // пустой конструктор нужен для Gson

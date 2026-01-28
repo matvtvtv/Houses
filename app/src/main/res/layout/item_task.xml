@@ -4,10 +4,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="12dp"
+    android:layout_marginHorizontal="16dp"
     android:layout_marginVertical="8dp"
-    app:cardCornerRadius="20dp"
-    app:cardElevation="2dp"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="#E0E0E0"
     app:cardBackgroundColor="@color/white">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -19,11 +21,12 @@
             android:id="@+id/tvTaskMoney"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_money_badge"
+            android:backgroundTint="#E8F5E9"
             android:paddingHorizontal="12dp"
-            android:paddingVertical="4dp"
-            android:text="500"
+            android:paddingVertical="6dp"
+            android:text="500 "
             android:textColor="#2E7D32"
+            android:textSize="16sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -36,7 +39,7 @@
             android:text="Заголовок задачи"
             android:textColor="#1C1B1F"
             android:textSize="18sp"
-            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
             app:layout_constraintEnd_toStartOf="@+id/tvTaskMoney"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -45,63 +48,81 @@
             android:id="@+id/tvTaskDesc"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Описание задачи..."
+            android:layout_marginTop="8dp"
+            android:text="Описание задачи, которое теперь читается лучше благодаря межстрочному интервалу."
             android:textColor="#49454F"
+            android:lineSpacingExtra="2dp"
+            android:textSize="14sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvTaskTitle" />
 
-        <TextView
-            android:id="@+id/tvTaskRepeatDays"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/metaContainer"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="#F3EDF7"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="2dp"
-            android:text="ПН, СР"
-            android:textColor="#6750A4"
-            android:textSize="11sp"
-            android:textStyle="bold"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvTaskDesc" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvTaskDesc">
+
+            <TextView
+                android:id="@+id/tvTaskRepeatDays"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawablePadding="6dp"
+                android:text="ПН, СР"
+                android:textColor="#6750A4"
+                android:textSize="12sp"
+                 />
+
+            <TextView
+                android:id="@+id/tvTaskTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:drawablePadding="6dp"
+                android:text="17:00 - 22:00"
+                android:textColor="#6750A4"
+                android:textSize="12sp"
+                 />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/tvStartedBy"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:background="#F3EDF7"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="2dp"
-            android:text="Выполняет"
-            android:textColor="#6750A4"
-            android:textSize="11sp"
-            android:textStyle="bold"
+            android:alpha="0.8"
+            android:drawablePadding="6dp"
+            android:text="Выполняет: Иван И."
+            android:textColor="#49454F"
+            android:textSize="12sp"
+
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvTaskRepeatDays" />
+            app:layout_constraintTop_toBottomOf="@id/metaContainer" />
 
         <TextView
             android:id="@+id/tvComment"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:background="#F5F5F5"
-            android:padding="10dp"
+
+            android:padding="12dp"
             android:text="Это комментарий к задаче"
             android:textColor="#757575"
             android:textSize="13sp"
-            android:textStyle="italic"
-            android:visibility="gone"
+            android:visibility="visible"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvTaskRepeatDays" />
+            app:layout_constraintTop_toBottomOf="@id/tvStartedBy" />
 
         <HorizontalScrollView
             android:id="@+id/photoScrollView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="12dp"
             android:scrollbars="none"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -111,24 +132,21 @@
                 android:id="@+id/photoContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="80dp"
-                android:orientation="horizontal"
-                android:visibility="visible" />
+                android:orientation="horizontal" />
         </HorizontalScrollView>
 
         <View
             android:id="@+id/divider"
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginTop="12dp"
-            android:background="#EEEEEE"
+            android:layout_marginTop="16dp"
+            android:background="#F0F0F0"
             app:layout_constraintTop_toBottomOf="@id/photoScrollView" />
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
             app:layout_constraintTop_toBottomOf="@id/divider">
 
             <CheckBox
@@ -136,26 +154,30 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Готово"
+                android:buttonTint="#6750A4"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
 
-                android:buttonTint="#6750A4" />
-
-
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRespond"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Взять"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnComments"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Чат" />
+                android:text="Чат"
+                app:layout_constraintEnd_toStartOf="@id/btnRespond"
+                app:layout_constraintTop_toTopOf="parent" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnRespond"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-
-                android:text="Взять" />
-        </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

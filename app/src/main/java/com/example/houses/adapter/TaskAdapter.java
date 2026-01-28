@@ -13,34 +13,32 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
 import com.example.houses.R;
 import com.example.houses.model.TaskInstanceDto;
 import com.example.houses.utils.ImageUtils;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
 
     public interface OnTaskActionListener {
-
-            void onClaim(TaskInstanceDto task, int position);     // ребёнок берёт задачу
-            void onComplete(TaskInstanceDto task, int position);  // родитель подтверждает
-            void onOpenComments(TaskInstanceDto task, int position);
-
+        void onClaim(TaskInstanceDto task, int position);
+        void onComplete(TaskInstanceDto task, int position);
+        void onOpenComments(TaskInstanceDto task, int position);
     }
 
+    private static final String TAG = "TaskAdapter";
 
     private final List<TaskInstanceDto> allItems = new ArrayList<>();
-
     private final List<TaskInstanceDto> visibleItems = new ArrayList<>();
+
+    private LocalDate selectedDate;
     public String currentUserRole;
     public String currentUserLogin;
 
-
-    private LocalDate selectedDate;
     private final OnTaskActionListener listener;
 
     public TaskAdapter(String userRole, String userLogin, OnTaskActionListener listener) {
@@ -49,72 +47,155 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         this.listener = listener;
     }
 
+    // ================== PUBLIC API ==================
 
-
-
-    /** Установить ВСЕ задачи */
     public void setAll(List<TaskInstanceDto> list) {
         allItems.clear();
-        if (list != null) {
-            allItems.addAll(list);
-        }
+        if (list != null) allItems.addAll(list);
         applyFilter();
     }
 
-    /** Добавить или обновить задачу (из WS или UI) */
     public void addOrUpdate(TaskInstanceDto task) {
         boolean updated = false;
 
         for (int i = 0; i < allItems.size(); i++) {
-            TaskInstanceDto current = allItems.get(i);
-            if (current.getInstanceId() != null &&
-                    current.getInstanceId().equals(task.getInstanceId())) {
+            TaskInstanceDto t = allItems.get(i);
+            if (t.instanceId != null && t.instanceId.equals(task.instanceId)) {
                 allItems.set(i, task);
                 updated = true;
                 break;
             }
         }
 
-        if (!updated) {
-            allItems.add(task);
-        }
-
+        if (!updated) allItems.add(task);
         applyFilter();
     }
 
-    /** Установить выбранную дату */
     public void setSelectedDate(LocalDate date) {
         this.selectedDate = date;
         applyFilter();
     }
 
-    private static final String TAG = "TaskAdapter";
+    // ================== FILTERING ==================
 
     private void applyFilter() {
         visibleItems.clear();
-        Log.d(TAG, "Filtering " + allItems.size() + " tasks for date: " + selectedDate);
 
         for (TaskInstanceDto t : allItems) {
-            if (t.getTaskDate() == null) {
-                Log.w(TAG, "Task has null date: " + t.title);
-                continue;
+            Log.d(TAG, "Task data: startTime=" + t.startTime +
+                    ", endTime=" + t.endTime +
+                    ", partDay=" + t.partDay);
+            // 1. Дата
+            if (selectedDate != null && t.taskDate != null) {
+                try {
+                    LocalDate taskDate = LocalDate.parse(t.taskDate);
+                    if (!selectedDate.equals(taskDate)) continue;
+                } catch (Exception e) {
+                    continue;
+                }
             }
 
-            try {
-                LocalDate taskDate = LocalDate.parse(t.getTaskDate());
-                if (selectedDate.equals(taskDate)) {
-                    visibleItems.add(t);
-                    Log.d(TAG, "Added task: " + t.title + " for " + taskDate);
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Invalid date format: " + t.getTaskDate(), e);
-            }
+            // 2. Время
+            if (!isTimeInRange(t.startTime, t.endTime)) continue;
+
+            // 3. Период дня
+            if (!matchesPartDay(t.partDay)) continue;
+
+            visibleItems.add(t);
         }
 
-        Log.d(TAG, "Visible items: " + visibleItems.size());
         notifyDataSetChanged();
     }
 
+    /**
+     * Принудительно пересчитать фильтр (внешний вызов из фрагмента)
+     */
+    public void refresh() {
+        applyFilter();
+    }
+
+    private boolean isTimeInRange(String start, String end) {
+        try {
+            LocalTime now = LocalTime.now();
+
+            // Если есть startTime и сейчас раньше — не показываем
+            if (start != null) {
+                LocalTime s = LocalTime.parse(start);
+                if (now.isBefore(s)) {
+                    Log.d(TAG, "Too early, hiding task");
+                    return false;
+                }
+            }
+
+            // Если есть endTime и сейчас позже — не показываем
+            if (end != null) {
+                LocalTime e = LocalTime.parse(end);
+                if (now.isAfter(e)) {
+                    Log.d(TAG, "Too late, hiding task");
+                    return false;
+                }
+            }
+
+            return true; // В диапазоне или нет ограничений
+
+        } catch (Exception e) {
+            Log.e(TAG, "Time parse error: " + e.getMessage());
+            return true; // При ошибке парсинга показываем на всякий случай
+        }
+    }
+    private boolean matchesPartDay(String partDay) {
+        if (partDay == null) return true;
+
+        int hour = LocalTime.now().getHour();
+
+        switch (partDay) {
+            case "MORNING": return hour >= 6 && hour < 12;
+            case "DAY":     return hour >= 12 && hour < 18;
+            case "EVENING": return hour >= 18 && hour < 23;
+            default: return true;
+        }
+    }
+
+    /**
+     * Возвращает миллисекунды до ближайшего изменения видимости (следующий startTime или endTime),
+     * или -1 если ничего подходящего не найдено.
+     */
+    public long getMillisUntilNextTimeThreshold() {
+        try {
+            java.time.LocalTime now = java.time.LocalTime.now();
+            java.time.Duration best = null;
+
+            for (TaskInstanceDto t : allItems) {
+                if (t.startTime != null && !t.startTime.isEmpty()) {
+                    try {
+                        java.time.LocalTime s = java.time.LocalTime.parse(t.startTime);
+                        if (s.isAfter(now)) {
+                            java.time.Duration d = java.time.Duration.between(now, s);
+                            if (best == null || d.compareTo(best) < 0) best = d;
+                        }
+                    } catch (Exception ignored) {}
+                }
+                if (t.endTime != null && !t.endTime.isEmpty()) {
+                    try {
+                        java.time.LocalTime e = java.time.LocalTime.parse(t.endTime);
+                        if (e.isAfter(now)) {
+                            java.time.Duration d = java.time.Duration.between(now, e);
+                            if (best == null || d.compareTo(best) < 0) best = d;
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            if (best == null) return -1;
+            long millis = best.toMillis();
+            // добавим небольшой буфер 1 сек
+            return Math.max(0, millis + 1000);
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    // ================== ADAPTER ==================
 
     @Override
     public int getItemCount() {
@@ -133,23 +214,65 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
     public void onBindViewHolder(@NonNull VH holder, int position) {
         TaskInstanceDto t = visibleItems.get(position);
 
-        // 1. Заголовок и Описание
+        // ===== Цвет по важности =====
+        int importance = t.importance > 0 ? t.importance : 1;
+        switch (importance) {
+            case 3:
+                holder.itemView.setBackgroundResource(R.drawable.bg_task_important);
+                break;
+            case 2:
+                holder.itemView.setBackgroundResource(R.drawable.bg_task_medium);
+                break;
+            default:
+                holder.itemView.setBackgroundResource(R.drawable.bg_task_normal);
+        }
+
+        // ===== Текст =====
         holder.title.setText(t.title != null ? t.title : "");
         holder.desc.setText(t.description != null ? t.description : "");
-        holder.desc.setVisibility(t.description != null && !t.description.isEmpty() ? View.VISIBLE : View.GONE);
+        holder.desc.setVisibility(
+                t.description != null && !t.description.isEmpty() ? View.VISIBLE : View.GONE
+        );
 
-        // 2. Награда
         holder.money.setText(String.valueOf(t.money));
 
-        // 3. Комментарий
+        // ===== Комментарий =====
         if (t.comment != null && !t.comment.isEmpty()) {
             holder.tvComment.setText(t.comment);
             holder.tvComment.setVisibility(View.VISIBLE);
         } else {
             holder.tvComment.setVisibility(View.GONE);
         }
+        StringBuilder timeBuilder = new StringBuilder();
+        if (t.startTime != null && !t.startTime.isEmpty()) {
+            timeBuilder.append(t.startTime);
+        }
+        if (t.endTime != null && !t.endTime.isEmpty()) {
+            if (timeBuilder.length() > 0) {
+                timeBuilder.append(" - ");
+            } else {
+                timeBuilder.append("До ");
+            }
+            timeBuilder.append(t.endTime);
+        }
 
-        // 4. Кто начал выполнение
+        if (timeBuilder.length() == 0 && t.partDay != null && !t.partDay.isEmpty()) {
+            switch (t.partDay) {
+                case "MORNING": timeBuilder.append("☀️ Утро (6:00-12:00)"); break;
+                case "DAY":     timeBuilder.append("🌤 День (12:00-18:00)"); break;
+                case "EVENING": timeBuilder.append("🌙 Вечер (18:00-23:00)"); break;
+                default:        timeBuilder.append(t.partDay);
+            }
+        }
+
+        if (timeBuilder.length() > 0) {
+            holder.tvTaskTime.setText(timeBuilder.toString());
+            holder.tvTaskTime.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvTaskTime.setVisibility(View.GONE);
+        }
+
+
         if (t.userLogin != null && !t.userLogin.isEmpty()) {
             holder.tvStartedBy.setText("Выполняет: " + t.userLogin);
             holder.tvStartedBy.setVisibility(View.VISIBLE);
@@ -157,100 +280,86 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
             holder.tvStartedBy.setVisibility(View.GONE);
         }
 
-        // 5. Дни повтора
+        // ===== Дни повтора =====
         if (t.repeat && t.repeatDays != null && !t.repeatDays.isEmpty()) {
-            holder.repeatDays.setText(String.join(", ", t.repeatDays).toUpperCase());
+            holder.repeatDays.setText(String.join(", ", t.repeatDays));
             holder.repeatDays.setVisibility(View.VISIBLE);
         } else {
             holder.repeatDays.setVisibility(View.GONE);
         }
 
-        // 6. Обработка ФОТО
-        View parentScroll = (View) holder.photoContainer.getParent();
+        // ===== Фото =====
         holder.photoContainer.removeAllViews();
-
         if (t.photoBase64 != null && !t.photoBase64.isEmpty()) {
             holder.photoContainer.setVisibility(View.VISIBLE);
-            if (parentScroll != null) parentScroll.setVisibility(View.VISIBLE);
-
             for (String base64 : t.photoBase64) {
-                ImageView imageView = new ImageView(holder.itemView.getContext());
+                ImageView iv = new ImageView(holder.itemView.getContext());
                 int size = (int) (80 * holder.itemView.getResources().getDisplayMetrics().density);
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-                params.setMargins(0, 0, 16, 0);
-                imageView.setLayoutParams(params);
-                imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                imageView.setClipToOutline(true);
-                imageView.setOutlineProvider(android.view.ViewOutlineProvider.BACKGROUND);
-                imageView.setBackgroundResource(R.drawable.bg_photo_rounding);
-                imageView.setImageBitmap(ImageUtils.base64ToBitmap(base64));
-                holder.photoContainer.addView(imageView);
+                LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(size, size);
+                p.setMargins(0, 0, 16, 0);
+                iv.setLayoutParams(p);
+                iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                iv.setBackgroundResource(R.drawable.bg_photo_rounding);
+                iv.setImageBitmap(ImageUtils.base64ToBitmap(base64));
+                holder.photoContainer.addView(iv);
             }
         } else {
             holder.photoContainer.setVisibility(View.GONE);
-            if (parentScroll != null) parentScroll.setVisibility(View.GONE);
         }
 
-        // 7. Статус и Кнопки
+        // ===== Статус =====
         holder.cbCompleted.setChecked(t.completed);
-        holder.itemView.setAlpha(t.completed ? 0.6f : 1.0f);
+        holder.itemView.setAlpha(t.completed ? 0.6f : 1f);
 
-        holder.btnRespond.setVisibility(View.GONE); // Скрываем по умолчанию
+        // ===== Кнопки =====
+        holder.btnRespond.setVisibility(View.GONE);
 
         if (!t.completed) {
-            if ("PARENT".equals(currentUserRole)) {
-                // Родитель видит кнопку "Подтвердить"
+            if ("PARENT".equals(currentUserRole) ||  "ADMIN".equals(currentUserRole)) {
                 holder.btnRespond.setText("Подтвердить");
                 holder.btnRespond.setVisibility(View.VISIBLE);
-                holder.btnRespond.setEnabled(true);
-                holder.btnRespond.setOnClickListener(v -> {
-                    if (listener != null) listener.onComplete(t, position);
-                });
+                holder.btnRespond.setOnClickListener(v ->
+                        listener.onComplete(t, position));
             } else {
-                // Ребенок: логика взятия задачи
                 if (t.userLogin == null || t.userLogin.isEmpty()) {
-                    // Задача свободна
                     holder.btnRespond.setText("Взять");
                     holder.btnRespond.setVisibility(View.VISIBLE);
-                    holder.btnRespond.setEnabled(true);
-                    holder.btnRespond.setOnClickListener(v -> {
-                        if (listener != null) listener.onClaim(t, position);
-                    });
+                    holder.btnRespond.setOnClickListener(v ->
+                            listener.onClaim(t, position));
                 } else if (currentUserLogin.equals(t.userLogin)) {
-                    // Задача взята мной
                     holder.btnRespond.setText("В процессе");
                     holder.btnRespond.setVisibility(View.VISIBLE);
                     holder.btnRespond.setEnabled(false);
-                } else {
-                    // Задача взята другим
-                    holder.btnRespond.setVisibility(View.GONE);
                 }
             }
         }
 
-        holder.btnComments.setOnClickListener(v -> {
-            if (listener != null) listener.onOpenComments(t, holder.getBindingAdapterPosition());
-        });
+        holder.btnComments.setOnClickListener(v ->
+                listener.onOpenComments(t, holder.getBindingAdapterPosition()));
     }
 
+    // ================== VIEW HOLDER ==================
+
     static class VH extends RecyclerView.ViewHolder {
-        TextView title, desc, money, repeatDays, tvComment, tvStartedBy;
+        TextView title, desc, money, repeatDays, tvComment, tvStartedBy,tvTaskTime;
         CheckBox cbCompleted;
         Button btnRespond, btnComments;
         LinearLayout photoContainer;
 
-        VH(@NonNull View itemView) {
-            super(itemView);
-            title = itemView.findViewById(R.id.tvTaskTitle);
-            desc = itemView.findViewById(R.id.tvTaskDesc);
-            money = itemView.findViewById(R.id.tvTaskMoney);
-            repeatDays = itemView.findViewById(R.id.tvTaskRepeatDays);
-            cbCompleted = itemView.findViewById(R.id.cbTaskCompleted);
-            btnRespond = itemView.findViewById(R.id.btnRespond);
-            btnComments = itemView.findViewById(R.id.btnComments);
-            tvComment = itemView.findViewById(R.id.tvComment);
-            tvStartedBy = itemView.findViewById(R.id.tvStartedBy);
-            photoContainer = itemView.findViewById(R.id.photoContainer);
+        VH(@NonNull View v) {
+            super(v);
+            title = v.findViewById(R.id.tvTaskTitle);
+            desc = v.findViewById(R.id.tvTaskDesc);
+            money = v.findViewById(R.id.tvTaskMoney);
+            repeatDays = v.findViewById(R.id.tvTaskRepeatDays);
+            cbCompleted = v.findViewById(R.id.cbTaskCompleted);
+            btnRespond = v.findViewById(R.id.btnRespond);
+            btnComments = v.findViewById(R.id.btnComments);
+            tvComment = v.findViewById(R.id.tvComment);
+            tvStartedBy = v.findViewById(R.id.tvStartedBy);
+            photoContainer = v.findViewById(R.id.photoContainer);
+            tvTaskTime = v.findViewById(R.id.tvTaskTime); // добавьте эту строку
+
         }
     }
 }

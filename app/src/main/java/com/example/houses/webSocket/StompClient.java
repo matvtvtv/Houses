@@ -215,7 +215,16 @@ public class StompClient {
         payload.put("repeat", task.isRepeat());
         payload.put("repeatDays", task.getDays() != null ? Arrays.asList(task.getDays()) : null);
         payload.put("startDate", task.getStartDate());
-        payload.put("targetLogin", task.getTargetLogin()); // если есть
+        payload.put("targetLogin", task.getTargetLogin());
+        payload.put("importance", task.getImportance());
+        payload.put("partDay", task.getPartDay());
+        payload.put("startTime", task.getStartTime());
+        payload.put("endTime", task.getEndTime());
+        payload.put("completed", false);
+        payload.put("ownerLogin", chatLogin);
+        String json = gson.toJson(payload);
+        Log.d(TAG, "Task JSON to send: " + json);
+
 
         send("/app/ws/tasks/" + chatLogin + "/create", payload);
     }

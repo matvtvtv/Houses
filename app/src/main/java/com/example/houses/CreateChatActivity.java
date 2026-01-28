@@ -42,6 +42,7 @@ public class CreateChatActivity extends AppCompatActivity {
         btnCreate.setOnClickListener(v -> createChat());
         btnJoinChat.setOnClickListener(v -> {
             startActivity(new Intent(CreateChatActivity.this, JoinChatActivity.class));
+            finish();
 
         });
     }

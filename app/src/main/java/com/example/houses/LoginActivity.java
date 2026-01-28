@@ -58,6 +58,8 @@ public class LoginActivity extends AppCompatActivity {
                     LoginActivity.this,
                     RegistrationActivity.class
             ));
+            finish();
+
         });
     }
 

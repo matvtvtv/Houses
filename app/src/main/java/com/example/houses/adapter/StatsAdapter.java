@@ -38,6 +38,7 @@ public class StatsAdapter extends RecyclerView.Adapter<StatsAdapter.StatsViewHol
 
     @Override
     public void onBindViewHolder(@NonNull StatsViewHolder holder, int position) {
+
         UserStats stats = statsList.get(position);
 
         holder.tvLogin.setText(stats.getUserLogin());

@@ -5,4 +5,9 @@
     <color name="light_blue">#269ABD</color>
     <color name="light_green">#2A9692</color>
     <color name="light_grey">#636363</color>
+    <color name="bg_dark">#121116</color>
+    <color name="card_dark">#222126</color>
+    <color name="accent_purple">#8E54E9</color>
+    <color name="text_gray">#9A9A9A</color>
+    <color name="gold_coin">#FFD700</color>
 </resources>

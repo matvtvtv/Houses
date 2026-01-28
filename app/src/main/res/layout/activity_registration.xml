@@ -110,8 +110,7 @@
                 android:layout_marginBottom="8dp"
                 android:text="Родитель"
                 android:textColor="@android:color/white"
-                app:buttonTint="@color/radio_button_tint"
-                android:background="@drawable/bg_radio_text"/>
+                app:buttonTint="@color/radio_button_tint" />
 
             <androidx.appcompat.widget.AppCompatRadioButton
                 android:id="@+id/rbChild"
@@ -119,8 +118,14 @@
                 android:layout_height="wrap_content"
                 android:text="Ребенок"
                 android:textColor="@android:color/white"
-                app:buttonTint="@color/radio_button_tint"
-                android:background="@drawable/bg_radio_text"/>
+                app:buttonTint="@color/radio_button_tint" />
+            <androidx.appcompat.widget.AppCompatRadioButton
+                android:id="@+id/rbEn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Другой член семьи"
+                android:textColor="@android:color/white"
+                app:buttonTint="@color/radio_button_tint" />
         </RadioGroup>
 
         <!-- REGISTER -->
