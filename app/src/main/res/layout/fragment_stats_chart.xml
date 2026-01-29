@@ -4,57 +4,178 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg">
+    android:background="@color/bg"
+    android:fillViewport="true">
+
     <LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Статистика за 14 дней"
-        android:textColor="#000000"
-        android:textSize="22sp"
-        android:fontFamily="sans-serif-black"
-        android:layout_marginStart="8dp"
-        android:layout_marginBottom="16dp"/>
-
-    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="24dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="1.5dp"
-        app:strokeColor="#000000"
-        app:cardBackgroundColor="#FFFFFF">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <LinearLayout
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Статистика"
+            android:textColor="#000000"
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-black"
+            android:layout_marginStart="4dp"
+            android:layout_marginBottom="4dp"/>
+
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp">
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="#FFFFFF"
+            android:layout_marginBottom="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Выполненные задачи"
-                android:textColor="#000000"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-medium"
-                android:textAllCaps="true"
-                android:letterSpacing="0.1"/>
-
-            <com.github.mikephil.charting.charts.BarChart
-                android:id="@+id/chartStats"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="250dp"
-                android:layout_marginTop="16dp"
-                android:background="#FFFFFF"/>
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp">
 
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
 
-</LinearLayout>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Выполненные задачи"
+                        android:textColor="#000000"
+                        android:textSize="16sp"
+                        android:fontFamily="sans-serif-medium"/>
+
+                    <com.google.android.material.chip.Chip
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2 недели"
+                        android:textSize="12sp"
+                        app:chipBackgroundColor="#F5F5F5"
+                        app:chipStrokeWidth="0dp"
+                        android:clickable="false"/>
+                </LinearLayout>
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="320dp">
+
+                    <com.github.mikephil.charting.charts.BarChart
+                        android:id="@+id/chartStats"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_marginTop="8dp"/>
+
+                    <TextView
+                        android:id="@+id/tvEmptyState"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="Нет данных"
+                        android:textColor="#999999"
+                        android:textSize="16sp"
+                        android:visibility="gone"/>
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginTop="16dp">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginEnd="24dp">
+
+                        <View
+                            android:layout_width="12dp"
+                            android:layout_height="12dp"
+                            android:background="@drawable/circle_green"
+                            android:layout_marginEnd="8dp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Выполнено"
+                            android:textColor="#666666"
+                            android:textSize="12sp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <View
+                            android:layout_width="16dp"
+                            android:layout_height="2dp"
+                            android:background="#FFB74D"
+                            android:layout_marginEnd="8dp"
+                            android:layerType="software"
+                            android:backgroundTintMode="src_in"
+                            android:backgroundTint="#FFB74D"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Среднее"
+                            android:textColor="#666666"
+                            android:textSize="12sp"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Дополнительная карточка с инсайтами -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="#E8F5E9"
+            android:layout_marginTop="8dp">
+
+<!--            <LinearLayout-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:orientation="vertical"-->
+<!--                android:padding="20dp">-->
+
+<!--                <TextView-->
+<!--                    android:layout_width="wrap_content"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:text="💡 Инсайт"-->
+<!--                    android:textColor="#2E7D32"-->
+<!--                    android:textSize="14sp"-->
+<!--                    android:fontFamily="sans-serif-bold"-->
+<!--                    android:layout_marginBottom="4dp"/>-->
+
+<!--                <TextView-->
+<!--                    android:layout_width="wrap_content"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:text="Самый продуктивный день обычно приходится на среду. Попробуй запланировать сложные задачи на эту дату."-->
+<!--                    android:textColor="#1B5E20"-->
+<!--                    android:textSize="14sp"-->
+<!--                    android:lineSpacingMultiplier="1.2"/>-->
+<!--            </LinearLayout>-->
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
 </androidx.core.widget.NestedScrollView>

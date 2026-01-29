@@ -29,7 +29,6 @@
             android:hint="Название задачи"
             android:textColorHint="#9A9A9A"
             app:hintTextColor="#8E54E9"
-            app:boxStrokeColor="#8E54E9"
             android:layout_marginBottom="16dp">
 
             <com.google.android.material.textfield.TextInputEditText
