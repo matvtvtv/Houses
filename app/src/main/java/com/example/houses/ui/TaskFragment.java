@@ -33,6 +33,7 @@ import com.example.houses.R;
 import com.example.houses.adapter.DateAdapter;
 import com.example.houses.adapter.TaskAdapter;
 import com.example.houses.model.ChatData;
+import com.example.houses.model.ChatMessage;
 import com.example.houses.model.DayItem;
 import com.example.houses.model.TaskInstanceDto;
 import com.example.houses.webSocket.StompClient;
@@ -179,17 +180,24 @@ public class TaskFragment extends Fragment {
             loadChatUsersAndShowDialog(chatLogin, userRole);
         });
 
-        stompClient = new StompClient(requireContext());
+        if (stompClient == null) {
+            stompClient = new StompClient(requireContext());
+        }
+
         stompClient.setListener(new StompClient.StompListener() {
             @Override
             public void onConnected() {
-                stompClient.subscribeToTasks(chatLogin);
+                if (!isAdded()) return;
+                if (stompClient != null && chatLogin != null && !chatLogin.isEmpty()) {
+                    stompClient.subscribeToTasks(chatLogin);
+                }
             }
 
             @Override
             public void onTaskInstance(TaskInstanceDto instanceDto) {
+                if (!isAdded()) return;
                 requireActivity().runOnUiThread(() -> {
-                    adapter.addOrUpdate(instanceDto);
+                    if (adapter != null) adapter.addOrUpdate(instanceDto);
                     scheduleSmartRefresh();
 
                     boolean isMyTask = userLogin.equals(instanceDto.userLogin);
@@ -204,13 +212,15 @@ public class TaskFragment extends Fragment {
             }
 
             @Override
-            public void onChatMessage(com.example.houses.model.ChatMessage m) {}
+            public void onChatMessage(ChatMessage m) {}
 
             @Override
             public void onError(String reason) {
                 Log.e(TAG, reason);
             }
         });
+
+
 
         stompClient.connect();
         refreshHandler = new Handler(Looper.getMainLooper());
@@ -435,6 +445,7 @@ public class TaskFragment extends Fragment {
         rootView = null;
         allTasks.clear();
     }
+
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {

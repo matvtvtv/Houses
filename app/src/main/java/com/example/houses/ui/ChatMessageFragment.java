@@ -92,31 +92,46 @@ public class ChatMessageFragment extends Fragment {
 
         loadHistory();
 
-        stompClient = new StompClient(requireContext());
+        if (stompClient == null) {
+            stompClient = new StompClient(requireContext());
+        }
 
-        // ====== слушатель STOMP ======
         stompClient.setListener(new StompClient.StompListener() {
             @Override
             public void onConnected() {
                 Log.d("ChatMessageFragment", "STOMP connected");
-                stompClient.subscribeToChat(chatLogin);
 
-                requireActivity().runOnUiThread(() -> btnSend.setEnabled(true));
+                // Проверяем, что фрагмент добавлен к активности
+                if (!isAdded()) return;
+
+                // Проверяем stompClient и chatLogin
+                if (stompClient != null && chatLogin != null && !chatLogin.isEmpty()) {
+                    stompClient.subscribeToChat(chatLogin);
+                }
+
+                // Обновляем UI безопасно
+                if (btnSend != null) {
+                    btnSend.post(() -> btnSend.setEnabled(true));
+                }
             }
+
 
             @Override
             public void onChatMessage(ChatMessage message) {
+                if (!isAdded()) return;
                 requireActivity().runOnUiThread(() -> {
-                    adapter.addMessage(message);
-                    rv.smoothScrollToPosition(adapter.getItemCount() - 1);
+                    if (adapter != null) {
+                        adapter.addMessage(message);
+                        RecyclerView rv = getView().findViewById(R.id.recyclerMessages);
+                        if (rv != null) rv.smoothScrollToPosition(adapter.getItemCount() - 1);
+                    }
                 });
             }
 
-
             @Override
             public void onTaskInstance(TaskInstanceDto taskInstance) {
+                if (!isAdded()) return;
                 Log.d("ChatMessageFragment", "Received TaskInstance: " + taskInstance.getInstanceId());
-                // здесь можно обновлять адаптер задач, если нужно
             }
 
             @Override

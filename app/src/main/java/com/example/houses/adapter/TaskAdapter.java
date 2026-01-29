@@ -84,10 +84,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         visibleItems.clear();
 
         for (TaskInstanceDto t : allItems) {
-            Log.d(TAG, "Task data: startTime=" + t.startTime +
-                    ", endTime=" + t.endTime +
-                    ", partDay=" + t.partDay +
-                    ", targetLogin=" + t.targetLogin);
+
 
             // 1. ФИЛЬТР ПО targetLogin (строгое правило)
             if (t.targetLogin != null && !t.targetLogin.isEmpty()) {

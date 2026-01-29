@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.houses.R;
 import com.example.houses.adapter.StatsAdapter;
+import com.example.houses.model.ChatData;
 import com.example.houses.model.UserStats;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -23,7 +24,9 @@ import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -33,7 +36,11 @@ import okhttp3.Response;
 
 public class StatsFragment extends Fragment {
 
-    private static final String BASE_URL = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/stats/";
+    // Корень сервера (оттуда формируем два эндпоинта)
+    private static final String BASE_ROOT = "https://t7lvb7zl-8080.euw.devtunnels.ms/";
+    private static final String LEADERBOARD_PATH = "api/stats/"; // + {chatLogin} + /leaderboard?sortBy=money
+    private static final String CHAT_USERS_PATH = "api/chats_data/get_chats_users/"; // + {chatLogin}
+
     private RecyclerView recyclerStats;
     private StatsAdapter adapter;
     private OkHttpClient httpClient;
@@ -55,6 +62,9 @@ public class StatsFragment extends Fragment {
         chatLogin = prefs.getString("chatLogin", "");
         userLogin = prefs.getString("login", "");
 
+        if (chatLogin == null) chatLogin = "";
+        if (userLogin == null) userLogin = "";
+
         if (chatLogin.isEmpty() || userLogin.isEmpty()) {
             Toast.makeText(requireContext(), "Ошибка: данные пользователя не найдены", Toast.LENGTH_SHORT).show();
             return;
@@ -66,14 +76,22 @@ public class StatsFragment extends Fragment {
         recyclerStats = view.findViewById(R.id.recyclerStats);
         recyclerStats.setLayoutManager(new LinearLayoutManager(requireContext()));
 
-        adapter = new StatsAdapter(userLogin);
+        adapter = new StatsAdapter(userLogin, clickedUserLogin -> {
+            openStatsChart(clickedUserLogin);
+        });
         recyclerStats.setAdapter(adapter);
 
-        loadLeaderboard();
+
+        // Сначала загружаем пользователей чата и фильтруем по роли CHILD, затем лидерборд
+        loadChatUsersAndThenLeaderboard();
     }
 
-    private void loadLeaderboard() {
-        String url = BASE_URL + chatLogin + "/leaderboard?sortBy=money";
+    /**
+     * Запрос списка пользователей чата (ChatData), выбираем логины с ролью CHILD,
+     * затем загружаем лидерборд и фильтруем по этим логинам.
+     */
+    private void loadChatUsersAndThenLeaderboard() {
+        String url = BASE_ROOT + CHAT_USERS_PATH + chatLogin;
 
         Request request = new Request.Builder()
                 .url(url)
@@ -83,26 +101,114 @@ public class StatsFragment extends Fragment {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                requireActivity().runOnUiThread(() -> {
-                    Toast.makeText(requireContext(), "Ошибка соединения", Toast.LENGTH_SHORT).show();
-                });
+                requireActivity().runOnUiThread(() ->
+                        Toast.makeText(requireContext(), "Ошибка соединения (пользователи чата)", Toast.LENGTH_SHORT).show()
+                );
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 if (!response.isSuccessful()) {
+                    requireActivity().runOnUiThread(() ->
+                            Toast.makeText(requireContext(), "Ошибка сервера (пользователи чата): " + response.code(), Toast.LENGTH_SHORT).show()
+                    );
+                    return;
+                }
+
+                String body = response.body() != null ? response.body().string() : "[]";
+                Type chatDataListType = new TypeToken<ArrayList<ChatData>>(){}.getType();
+                List<ChatData> chatUsers;
+                try {
+                    chatUsers = gson.fromJson(body, chatDataListType);
+                } catch (Exception ex) {
+                    chatUsers = new ArrayList<>();
+                }
+
+                // Собираем логины пользователей с ролью CHILD
+                Set<String> childLogins = new HashSet<>();
+                for (ChatData cd : chatUsers) {
+                    if (cd != null && cd.getUserRole() != null && cd.getUserRole().equalsIgnoreCase("CHILD")) {
+                        if (cd.getUserLogin() != null) {
+                            childLogins.add(cd.getUserLogin());
+                        }
+                    }
+                }
+
+                if (childLogins.isEmpty()) {
+                    // Нет детей — очищаем адаптер и уведомляем пользователя
                     requireActivity().runOnUiThread(() -> {
-                        Toast.makeText(requireContext(), "Ошибка сервера: " + response.code(), Toast.LENGTH_SHORT).show();
+                        adapter.setData(new ArrayList<>());
+                        Toast.makeText(requireContext(), "В этом чате нет пользователей с ролью CHILD", Toast.LENGTH_SHORT).show();
                     });
                     return;
                 }
 
-                String body = response.body().string();
-                Type listType = new TypeToken<ArrayList<UserStats>>(){}.getType();
-                List<UserStats> statsList = gson.fromJson(body, listType);
-
-                requireActivity().runOnUiThread(() -> adapter.setData(statsList));
+                // Есть дети — загружаем лидерборд и отфильтруем по childLogins
+                loadLeaderboardFilteredBy(childLogins);
             }
         });
     }
+
+
+    private void loadLeaderboardFilteredBy(Set<String> childLogins) {
+        String url = BASE_ROOT + LEADERBOARD_PATH + chatLogin + "/leaderboard?sortBy=money";
+
+        Request request = new Request.Builder()
+                .url(url)
+                .get()
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                requireActivity().runOnUiThread(() ->
+                        Toast.makeText(requireContext(), "Ошибка соединения (лидерборд)", Toast.LENGTH_SHORT).show()
+                );
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (!response.isSuccessful()) {
+                    requireActivity().runOnUiThread(() ->
+                            Toast.makeText(requireContext(), "Ошибка сервера (лидерборд): " + response.code(), Toast.LENGTH_SHORT).show()
+                    );
+                    return;
+                }
+
+                String body = response.body() != null ? response.body().string() : "[]";
+                Type listType = new TypeToken<ArrayList<UserStats>>(){}.getType();
+                List<UserStats> statsList;
+                try {
+                    statsList = gson.fromJson(body, listType);
+                } catch (Exception ex) {
+                    statsList = new ArrayList<>();
+                }
+
+                // Фильтруем — оставляем только те userLogin, которые есть в childLogins
+                List<UserStats> filtered = new ArrayList<>();
+                for (UserStats s : statsList) {
+                    if (s != null && s.getUserLogin() != null && childLogins.contains(s.getUserLogin())) {
+                        filtered.add(s);
+                    }
+                }
+
+                requireActivity().runOnUiThread(() -> adapter.setData(filtered));
+            }
+        });
+    }
+    private void openStatsChart(String selectedUserLogin) {
+        StatsChartFragment fragment = new StatsChartFragment();
+
+        Bundle args = new Bundle();
+        args.putString("userLogin", selectedUserLogin);
+        fragment.setArguments(args);
+
+        requireActivity()
+                .getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.bottomNavigation, fragment) // ← твой контейнер
+                .addToBackStack(null)
+                .commit();
+    }
+
 }

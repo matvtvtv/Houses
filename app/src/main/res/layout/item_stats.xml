@@ -20,23 +20,23 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
             android:layout_marginEnd="12dp"
-            app:layout_constraintStart_toStartOf="parent"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/tvMoney"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
             <TextView
                 android:id="@+id/tvUserLogin"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="User Login"
-                android:textColor="#212121"
-                android:textSize="18sp"
+                android:ellipsize="end"
                 android:fontFamily="sans-serif-medium"
                 android:maxLines="1"
-                android:ellipsize="end"/>
+                android:text="User Login"
+                android:textColor="#212121"
+                android:textSize="18sp" />
 
             <TextView
                 android:id="@+id/tvCompletedTasks"
@@ -45,7 +45,7 @@
                 android:layout_marginTop="4dp"
                 android:text="Выполнено задач: 12"
                 android:textColor="#757575"
-                android:textSize="14sp"/>
+                android:textSize="14sp" />
         </LinearLayout>
 
         <!-- Правый блок: деньги -->
@@ -53,18 +53,18 @@
             android:id="@+id/tvMoney"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_money_label"
             android:backgroundTint="#FFEB3B"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
             android:paddingHorizontal="14dp"
             android:paddingVertical="6dp"
             android:text="500 ₽"
             android:textColor="#212121"
             android:textSize="16sp"
-            android:fontFamily="sans-serif-medium"
-            android:gravity="center"
-            android:background="@drawable/bg_money_label"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -190,7 +190,7 @@ public class NewTaskDialog extends Dialog {
         for (ChatData user : chatUsers) {
             // Фильтруем: показываем только CHILD
             if ("CHILD".equals(user.getUserRole())) {
-                String display = user.getUserLogin() + " 👶";
+                String display = user.getUserLogin() ;
                 displayNames.add(display);
                 userLoginMap.put(display, user.getUserLogin());
             }

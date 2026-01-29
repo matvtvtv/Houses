@@ -73,17 +73,18 @@ public class StatsChartFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        SharedPreferences prefs = requireActivity().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
-        chatLogin = prefs.getString("chatLogin", "");
-        userLogin = prefs.getString("login", "");
+        Bundle args = getArguments();
+        if (args != null && args.containsKey("userLogin")) {
+            userLogin = args.getString("userLogin");
+        } else {
+            SharedPreferences prefs = requireActivity()
+                    .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
+            userLogin = prefs.getString("login", "");
+        }
 
         tvEmptyState = view.findViewById(R.id.tvEmptyState);
         cardContainer = view.findViewById(R.id.cardContainer);
 
-        if (chatLogin.isEmpty() || userLogin.isEmpty()) {
-            showError("Ошибка: данные пользователя не найдены");
-            return;
-        }
 
         httpClient = new OkHttpClient();
         gson = new Gson();
@@ -167,6 +168,7 @@ public class StatsChartFragment extends Fragment {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
+                if (!isAdded()) return; // фрагмент уже отсоединился
                 requireActivity().runOnUiThread(() -> {
                     showError("Ошибка загрузки статистики");
                 });
@@ -174,6 +176,8 @@ public class StatsChartFragment extends Fragment {
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
+                if (!isAdded()) return; // фрагмент уже отсоединился
+
                 if (!response.isSuccessful()) {
                     requireActivity().runOnUiThread(() -> {
                         showError("Ошибка сервера: " + response.code());
@@ -185,6 +189,8 @@ public class StatsChartFragment extends Fragment {
                 Type listType = new TypeToken<ArrayList<DailyStats>>(){}.getType();
                 List<DailyStats> statsList = gson.fromJson(body, listType);
 
+                if (!isAdded()) return;
+
                 requireActivity().runOnUiThread(() -> {
                     if (statsList == null || statsList.isEmpty()) {
                         showEmptyState();
@@ -193,6 +199,7 @@ public class StatsChartFragment extends Fragment {
                     }
                 });
             }
+
         });
     }
 

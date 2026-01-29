@@ -85,7 +85,7 @@ public class StompClient {
             public void onFailure(WebSocket webSocket, Throwable t, okhttp3.Response response) {
                 connected = false;
                 connecting = false;
-                postError(t.getMessage());
+                postError(t != null ? t.getMessage() : "Unknown error");
                 reconnect();
             }
 
@@ -179,35 +179,38 @@ public class StompClient {
 
     private void postError(String reason) {
         mainHandler.post(() -> {
-            if (listener != null) listener.onError(reason);
+            if (listener != null) listener.onError(reason != null ? reason : "Unknown error");
         });
     }
 
     // --- Subscribe / Send ---
     public void subscribe(String destination) {
-        if (!connected) return;
+        if (!connected || ws == null) return;
         String id = "sub-" + UUID.randomUUID();
         String frame = "SUBSCRIBE\nid:" + id + "\ndestination:" + destination + "\n\n\u0000";
         ws.send(frame);
     }
 
     public void subscribeToChat(String chatLogin) {
+        if (chatLogin == null || chatLogin.isEmpty()) return;
         subscribe("/topic/chat/" + chatLogin);
     }
 
     public void subscribeToTasks(String chatLogin) {
+        if (chatLogin == null || chatLogin.isEmpty()) return;
         subscribe("/topic/tasks/" + chatLogin);
     }
 
     public void send(String destination, Object payload) {
-        if (!connected) return;
+        if (!connected || ws == null) return;
         String json = gson.toJson(payload);
         String frame = "SEND\ndestination:" + destination + "\ncontent-type:application/json\n\n" + json + "\u0000";
         ws.send(frame);
     }
 
     public void sendTask(String chatLogin, Task task) {
-        // Создаем Map вместо отправки объекта Task напрямую
+        if (chatLogin == null || task == null) return;
+
         Map<String, Object> payload = new HashMap<>();
         payload.put("title", task.getTitle());
         payload.put("description", task.getDescription());
@@ -222,13 +225,13 @@ public class StompClient {
         payload.put("endTime", task.getEndTime());
         payload.put("completed", false);
         payload.put("ownerLogin", chatLogin);
-        String json = gson.toJson(payload);
-        Log.d(TAG, "Task JSON to send: " + json);
 
-
+        Log.d(TAG, "Task JSON to send: " + gson.toJson(payload));
         send("/app/ws/tasks/" + chatLogin + "/create", payload);
     }
+
     public void sendUpdate(String chatLogin, Object taskPayload) {
+        if (chatLogin == null || taskPayload == null) return;
         send("/app/tasks/" + chatLogin + "/update", taskPayload);
     }
 
@@ -237,8 +240,10 @@ public class StompClient {
             ws.send("DISCONNECT\n\n\u0000");
             ws.close(1000, "bye");
             connected = false;
+            ws = null;
         }
     }
+
     public static class MessageDTO {
         public String sender;
         public String content;
