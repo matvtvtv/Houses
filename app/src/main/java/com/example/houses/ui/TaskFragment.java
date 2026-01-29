@@ -100,6 +100,8 @@ public class TaskFragment extends Fragment {
     private CommentPhotoDialog currentDialog;
     private View rootLayout;
     private TextView textView;
+    private TextView textCoins;
+
     private Handler refreshHandler;
     private Runnable refreshRunnable;
     private Runnable scheduledRefreshRunnable;
@@ -131,11 +133,18 @@ public class TaskFragment extends Fragment {
         textView.setText("логин группы: " + chatLogin);
         recyclerTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
         btnCreate = view.findViewById(R.id.btnCreateTask);
-        if(userRole.equals("CHILD")) {
-            btnCreate.setVisibility(View.GONE);
+        textCoins = view.findViewById(R.id.textCoins);
+
+        if ("CHILD".equals(userRole)) {
+
+            textCoins.setVisibility(View.VISIBLE);
+            loadUserMoney(userLogin,chatLogin);
         } else {
             btnCreate.setVisibility(View.VISIBLE);
+            textCoins.setVisibility(View.GONE);
         }
+
+
         adapter = new TaskAdapter(userRole, userLogin, new TaskAdapter.OnTaskActionListener() {
             @Override
             public void onClaim(TaskInstanceDto instance, int position) {
@@ -196,20 +205,31 @@ public class TaskFragment extends Fragment {
             @Override
             public void onTaskInstance(TaskInstanceDto instanceDto) {
                 if (!isAdded()) return;
-                requireActivity().runOnUiThread(() -> {
-                    if (adapter != null) adapter.addOrUpdate(instanceDto);
-                    scheduleSmartRefresh();
 
-                    boolean isMyTask = userLogin.equals(instanceDto.userLogin);
+                requireActivity().runOnUiThread(() -> {
+                    if (adapter != null) {
+                        adapter.addOrUpdate(instanceDto);
+                        scheduleSmartRefresh();
+                    }
+
+                    if ("CHILD".equals(userRole)) {
+                        loadUserMoney(userLogin,chatLogin);
+                    }
+
+                    boolean isMyTask =
+                            userLogin != null && userLogin.equals(instanceDto.userLogin);
+
                     if (!isMyTask) {
                         if (TaskForegroundServiceHolder.hService == null) {
-                            Intent serviceIntent = new Intent(requireContext(), TaskForegroundService.class);
+                            Intent serviceIntent =
+                                    new Intent(requireContext(), TaskForegroundService.class);
                             requireContext().startForegroundService(serviceIntent);
                         }
                         TaskForegroundServiceHolder.enqueue(instanceDto, requireContext());
                     }
                 });
             }
+
 
             @Override
             public void onChatMessage(ChatMessage m) {}
@@ -228,7 +248,6 @@ public class TaskFragment extends Fragment {
     }
 
     private void loadChatUsersAndShowDialog(String chatLogin, String currentUserRole) {
-        // ИСПРАВЛЕНО: Убран пробел в конце URL
         String url = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chats_data/get_chats_users/" + chatLogin;
         Request req = new Request.Builder().url(url).build();
 
@@ -260,6 +279,48 @@ public class TaskFragment extends Fragment {
             }
         });
     }
+    private void loadUserMoney(String userLogin,String chatLogin) {
+        String url = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chats_data/get_chats_users/" + chatLogin;
+
+        Request request = new Request.Builder()
+                .url(url)
+                .get()
+                .build();
+
+        httpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                Log.e(TAG, "Failed to load user money", e);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (!response.isSuccessful() || response.body() == null) return;
+
+                String body = response.body().string();
+
+                // Парсим как список
+                Type listType = new TypeToken<List<ChatData>>(){}.getType();
+                List<ChatData> users = gson.fromJson(body, listType);
+
+                if (users != null) {
+                    for (ChatData user : users) {
+                        if(user.getUserLogin().equals(userLogin)) {
+                            if (!isAdded()) return;
+
+                            requireActivity().runOnUiThread(() -> {
+                                if (textCoins != null) {
+                                    textCoins.setText("💰 " + user.getMoney());
+                                }
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
 
     private void showNewTaskDialog(String chatLogin, List<ChatData> users, String currentUserRole) {
         NewTaskDialog dialog = new NewTaskDialog(requireContext(), chatLogin, task -> {

@@ -104,11 +104,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
                 }
             }
 
-            // 3. Время
-            if (!isTimeInRange(t.startTime, t.endTime)) continue;
 
-            // 4. Период дня
-            if (!matchesPartDay(t.partDay)) continue;
+
+
 
             visibleItems.add(t);
         }
