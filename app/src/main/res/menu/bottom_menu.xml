@@ -15,10 +15,11 @@
         android:id="@+id/nav_stats"
         android:icon="@drawable/statistics_2_svgrepo_com"
         android:title="Рейтинг группы"/>
+
     <item
-        android:id="@+id/nav_stats_chat"
-        android:icon="@drawable/statistics_presentation_svgrepo_com"
-        android:title="График активности"/>
+        android:id="@+id/nav_exchange"
+        android:icon="@drawable/exchange_5_svgrepo_com"
+        android:title="Обмен"/>
 
     <item
         android:id="@+id/nav_settings"

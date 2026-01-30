@@ -16,6 +16,7 @@ import android.view.ViewParent;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -35,6 +36,7 @@ import com.example.houses.adapter.TaskAdapter;
 import com.example.houses.model.ChatData;
 import com.example.houses.model.ChatMessage;
 import com.example.houses.model.DayItem;
+import com.example.houses.model.ExchangeOffer;
 import com.example.houses.model.TaskInstanceDto;
 import com.example.houses.webSocket.StompClient;
 import com.google.gson.Gson;
@@ -76,6 +78,7 @@ public class TaskFragment extends Fragment {
     private SharedPreferences preferences;
     private TaskAdapter adapter;
     private StompClient stompClient;
+    private LinearLayout coinContainer;
     private OkHttpClient httpClient;
 
     private Gson gson = new GsonBuilder()
@@ -130,18 +133,20 @@ public class TaskFragment extends Fragment {
         recyclerTasks = view.findViewById(R.id.recyclerTasks);
         rootLayout = view.findViewById(R.id.rootLayout);
         textView = view.findViewById(R.id.textView);
+        coinContainer = view.findViewById(R.id.coinContainer);
         textView.setText("логин группы: " + chatLogin);
         recyclerTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
         btnCreate = view.findViewById(R.id.btnCreateTask);
         textCoins = view.findViewById(R.id.textCoins);
 
         if ("CHILD".equals(userRole)) {
-
+            coinContainer.setVisibility(View.VISIBLE);
             textCoins.setVisibility(View.VISIBLE);
             loadUserMoney(userLogin,chatLogin);
         } else {
             btnCreate.setVisibility(View.VISIBLE);
             textCoins.setVisibility(View.GONE);
+            coinContainer.setVisibility(View.GONE);
         }
 
 
@@ -230,6 +235,11 @@ public class TaskFragment extends Fragment {
                 });
             }
 
+            // ДОБАВЬ ЭТОТ МЕТОД:
+            @Override
+            public void onExchangeUpdate(ExchangeOffer offer) {
+                // Не используется в TaskFragment, оставляем пустым
+            }
 
             @Override
             public void onChatMessage(ChatMessage m) {}
@@ -310,7 +320,8 @@ public class TaskFragment extends Fragment {
 
                             requireActivity().runOnUiThread(() -> {
                                 if (textCoins != null) {
-                                    textCoins.setText("💰 " + user.getMoney());
+                                    textCoins.setText(String.valueOf(user.getMoney()));
+
                                 }
                             });
                             break;

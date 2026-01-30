@@ -3,9 +3,8 @@ package com.example.houses.ui;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
-import android.graphics.Shader;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,7 +13,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.houses.R;
@@ -31,7 +29,6 @@ import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.github.mikephil.charting.highlight.Highlight;
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
-import com.github.mikephil.charting.renderer.Renderer;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -46,13 +43,16 @@ import java.util.Locale;
 
 import okhttp3.Call;
 import okhttp3.Callback;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
 public class StatsChartFragment extends Fragment {
 
+    private static final String TAG = "StatsChartFragment";
     private static final String BASE_URL = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/stats/daily";
+
     private BarChart chart;
     private OkHttpClient httpClient;
     private Gson gson;
@@ -73,54 +73,66 @@ public class StatsChartFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        Bundle args = getArguments();
-        if (args != null && args.containsKey("userLogin")) {
-            userLogin = args.getString("userLogin");
-        } else {
-            SharedPreferences prefs = requireActivity()
-                    .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
-            userLogin = prefs.getString("login", "");
-        }
-
+        // 1) Инициализируем view-поля
+        chart = view.findViewById(R.id.chartStats);
         tvEmptyState = view.findViewById(R.id.tvEmptyState);
         cardContainer = view.findViewById(R.id.cardContainer);
 
-
+        // 2) Инициализируем httpClient и gson
         httpClient = new OkHttpClient();
         gson = new Gson();
 
-        chart = view.findViewById(R.id.chartStats);
+        // 3) Читаем аргументы и prefs
+        Bundle args = getArguments();
+        if (args != null) {
+            userLogin = args.getString("userLogin", "");
+            chatLogin = args.getString("chatLogin", "");
+        }
+
+        SharedPreferences prefs = requireActivity()
+                .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
+
+        if (userLogin == null || userLogin.isEmpty()) {
+            userLogin = prefs.getString("login", "");
+        }
+        if (chatLogin == null || chatLogin.isEmpty()) {
+            chatLogin = prefs.getString("chatLogin", "");
+        }
+
+        if (chatLogin == null) chatLogin = "";
+        if (userLogin == null) userLogin = "";
+
+        // 4) Настраиваем chart до загрузки данных
         setupChart();
+
+        // 5) Загружаем статистику
         loadStats();
     }
 
     private void setupChart() {
-        // Отключаем фон сетки и стандартные элементы
+        if (chart == null) return;
+
         chart.setDrawBarShadow(false);
-        chart.setDrawValueAboveBar(false); // Значения будут показываться при нажатии
+        chart.setDrawValueAboveBar(false);
         chart.getDescription().setEnabled(false);
         chart.setPinchZoom(false);
         chart.setDrawGridBackground(false);
         chart.setExtraBottomOffset(8f);
         chart.setExtraTopOffset(16f);
-
-        // Включаем двойной тап для сброса зума
         chart.setDoubleTapToZoomEnabled(true);
-        chart.setScaleEnabled(false); // Отключаем масштабирование жестами для фиксированного вида
+        chart.setScaleEnabled(false);
 
-        // Настройка оси X
         XAxis xAxis = chart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setDrawGridLines(false);
         xAxis.setGranularity(1f);
-        xAxis.setLabelCount(7, true); // Показываем 7 меток для читаемости
+        xAxis.setLabelCount(7, true);
         xAxis.setTextColor(Color.parseColor("#666666"));
         xAxis.setTextSize(11f);
         xAxis.setYOffset(8f);
         xAxis.setAxisLineColor(Color.parseColor("#E0E0E0"));
         xAxis.setAxisLineWidth(1f);
 
-        // Настройка оси Y (левая)
         YAxis leftAxis = chart.getAxisLeft();
         leftAxis.setDrawGridLines(true);
         leftAxis.setGridColor(Color.parseColor("#F0F0F0"));
@@ -131,34 +143,39 @@ public class StatsChartFragment extends Fragment {
         leftAxis.setXOffset(8f);
         leftAxis.setAxisLineColor(Color.TRANSPARENT);
 
-        // Убираем правую ось
         chart.getAxisRight().setEnabled(false);
-
-        // Настройка легенды
-        chart.getLegend().setEnabled(false); // Убираем легенду для минималистичного вида
-
-        // Настройка анимации
+        chart.getLegend().setEnabled(false);
         chart.animateY(1000, Easing.EaseOutQuart);
 
-        // Слушатель нажатий для показа значений
         chart.setOnChartValueSelectedListener(new OnChartValueSelectedListener() {
             @Override
-            public void onValueSelected(Entry e, Highlight h) {
-                // Можно добавить haptic feedback
-            }
+            public void onValueSelected(Entry e, Highlight h) { /* haptic, тултипы и т.д. */ }
 
             @Override
-            public void onNothingSelected() {
-            }
+            public void onNothingSelected() {}
         });
     }
 
     private void loadStats() {
+        if (httpClient == null || gson == null) {
+            Log.e(TAG, "httpClient/gson not initialized");
+            return;
+        }
+
         LocalDate to = LocalDate.now();
         LocalDate from = to.minusDays(13);
 
-        String url = BASE_URL + "?chatLogin=" + chatLogin + "&userLogin=" + userLogin +
-                "&from=" + from + "&to=" + to;
+        String fromStr = from.toString();
+        String toStr = to.toString();
+
+        HttpUrl url = HttpUrl.parse(BASE_URL).newBuilder()
+                .addQueryParameter("chatLogin", chatLogin)
+                .addQueryParameter("userLogin", userLogin)
+                .addQueryParameter("from", fromStr)
+                .addQueryParameter("to", toStr)
+                .build();
+
+        Log.d(TAG, "Request URL: " + url.toString());
 
         Request request = new Request.Builder()
                 .url(url)
@@ -168,43 +185,51 @@ public class StatsChartFragment extends Fragment {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                if (!isAdded()) return; // фрагмент уже отсоединился
-                requireActivity().runOnUiThread(() -> {
-                    showError("Ошибка загрузки статистики");
-                });
+                if (!isAdded()) return;
+                requireActivity().runOnUiThread(() ->
+                        showError("Ошибка загрузки статистики: " + e.getMessage()));
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                if (!isAdded()) return; // фрагмент уже отсоединился
+                if (!isAdded()) return;
+
+                String body = response.body() != null ? response.body().string() : "";
+                Log.d(TAG, "Response code: " + response.code() + ", body: " + body);
 
                 if (!response.isSuccessful()) {
-                    requireActivity().runOnUiThread(() -> {
-                        showError("Ошибка сервера: " + response.code());
-                    });
+                    requireActivity().runOnUiThread(() ->
+                            showError("Ошибка сервера: " + response.code()));
                     return;
                 }
 
-                String body = response.body().string();
-                Type listType = new TypeToken<ArrayList<DailyStats>>(){}.getType();
-                List<DailyStats> statsList = gson.fromJson(body, listType);
+                Type listType = new TypeToken<ArrayList<DailyStats>>() {}.getType();
+                final List<DailyStats> statsList;
+                try {
+                    statsList = gson.fromJson(body, listType);
+                } catch (Exception ex) {
+                    Log.e(TAG, "Can't parse stats JSON", ex);
+                    // вместо method reference используем лямбду
+                    if (!isAdded()) return;
+                    requireActivity().runOnUiThread(() -> showEmptyState());
+                    return;
+                }
+
+                if (statsList == null || statsList.isEmpty()) {
+                    if (!isAdded()) return;
+                    requireActivity().runOnUiThread(() -> showEmptyState());
+                    return;
+                }
 
                 if (!isAdded()) return;
-
-                requireActivity().runOnUiThread(() -> {
-                    if (statsList == null || statsList.isEmpty()) {
-                        showEmptyState();
-                    } else {
-                        updateChart(statsList);
-                    }
-                });
+                requireActivity().runOnUiThread(() -> updateChart(statsList));
             }
-
         });
     }
 
     private void updateChart(List<DailyStats> statsList) {
-        // Сортируем по дате если нужно
+        if (chart == null) return;
+
         Collections.sort(statsList, (a, b) -> a.getDateAsLocal().compareTo(b.getDateAsLocal()));
 
         List<BarEntry> entries = new ArrayList<>();
@@ -221,49 +246,29 @@ public class StatsChartFragment extends Fragment {
             if (count > maxValue) maxValue = count;
         }
 
-        // Создаем градиентный цвет
-        int startColor = Color.parseColor("#4CAF50"); // Зеленый
-        int endColor = Color.parseColor("#81C784");   // Светло-зеленый
-
+        int startColor = Color.parseColor("#4CAF50");
         BarDataSet dataSet = new BarDataSet(entries, "Выполненные задачи");
         dataSet.setColor(startColor);
-
-        // Настройка закругленных углов (только верхние)
-        dataSet.setBarBorderWidth(1f);
-        dataSet.setBarBorderColor(Color.parseColor("#388E3C")); // Темно-зеленая граница
-
-        // Отключаем стандартные значения на столбцах
         dataSet.setDrawValues(false);
-
-        // Добавляем тень/свечение через эффекты (если поддерживается)
         dataSet.setBarShadowColor(Color.parseColor("#1A000000"));
-
-        // Настройка ширины столбцов
         dataSet.setBarBorderWidth(0f);
 
         BarData barData = new BarData(dataSet);
-        barData.setBarWidth(0.65f); // Ширина столбца относительно доступного пространства
+        barData.setBarWidth(0.65f);
 
         chart.setData(barData);
 
-        // Форматтер для оси X с днями недели и датами
         chart.getXAxis().setValueFormatter(new ValueFormatter() {
             @Override
             public String getFormattedValue(float value) {
                 int index = (int) value;
                 if (index >= 0 && index < dateLabels.length) {
-                    // Чередуем: день недели/дата через одну метку для экономии места
-                    if (index % 2 == 0) {
-                        return dayLabels[index];
-                    } else {
-                        return dateLabels[index];
-                    }
+                    return (index % 2 == 0) ? dayLabels[index] : dateLabels[index];
                 }
                 return "";
             }
         });
 
-        // Добавляем среднюю линию если есть данные
         if (maxValue > 0) {
             float average = calculateAverage(entries);
             LimitLine avgLine = new LimitLine(average, "Среднее");
@@ -276,33 +281,32 @@ public class StatsChartFragment extends Fragment {
 
             chart.getAxisLeft().removeAllLimitLines();
             chart.getAxisLeft().addLimitLine(avgLine);
-
-            // Устанавливаем максимум оси Y с запасом
             chart.getAxisLeft().setAxisMaximum(maxValue * 1.2f);
         }
 
-        // Анимация появления
         chart.animateY(1200, Easing.EaseOutElastic);
         chart.invalidate();
+
+        // скрываем пустое состояние
+        if (tvEmptyState != null) tvEmptyState.setVisibility(View.GONE);
+        if (chart != null) chart.setVisibility(View.VISIBLE);
     }
 
     private float calculateAverage(List<BarEntry> entries) {
         float sum = 0;
-        for (BarEntry entry : entries) {
-            sum += entry.getY();
-        }
-        return sum / entries.size();
+        for (BarEntry entry : entries) sum += entry.getY();
+        return entries.isEmpty() ? 0 : sum / entries.size();
     }
 
-    private void showEmptyState() {
-        if (tvEmptyState != null) {
-            tvEmptyState.setVisibility(View.VISIBLE);
-            chart.setVisibility(View.GONE);
-        }
-        Toast.makeText(requireContext(), "Нет данных за выбранный период", Toast.LENGTH_SHORT).show();
-    }
+
 
     private void showError(String message) {
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
     }
+    private void showEmptyState() {
+        if (tvEmptyState != null) tvEmptyState.setVisibility(View.VISIBLE);
+        if (chart != null) chart.setVisibility(View.GONE);
+        Toast.makeText(requireContext(), "Нет данных за выбранный период", Toast.LENGTH_SHORT).show();
+    }
+
 }

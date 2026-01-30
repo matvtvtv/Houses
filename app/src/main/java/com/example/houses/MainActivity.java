@@ -91,7 +91,8 @@ public class MainActivity extends AppCompatActivity {
                 viewPager.setCurrentItem(2, false);
                 return true;
             }
-            if (item.getItemId() == R.id.nav_stats_chat) {
+
+            if (item.getItemId() == R.id.nav_exchange) {
                 viewPager.setCurrentItem(3, false);
                 return true;
             }
@@ -110,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
                         if (position == 0) bottomNav.setSelectedItemId(R.id.nav_tasks);
                         if (position == 1) bottomNav.setSelectedItemId(R.id.nav_chat);
                         if (position == 2) bottomNav.setSelectedItemId(R.id.nav_stats);
-                        if (position == 3) bottomNav.setSelectedItemId(R.id.nav_stats_chat);
+                        if (position == 3) bottomNav.setSelectedItemId(R.id.nav_exchange);
                         if (position == 4) bottomNav.setSelectedItemId(R.id.nav_settings);
                     }
                 }

@@ -32,13 +32,13 @@
             android:textSize="24sp"
             android:textStyle="bold" />
 
-<!--        <TextView-->
-<!--            android:id="@+id/tvMonth"-->
-<!--            android:layout_width="wrap_content"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:text="янв."-->
-<!--            android:textColor="@color/white"-->
-<!--            android:textSize="12sp" />-->
+        <TextView
+            android:id="@+id/tvMonth"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="янв"
+            android:textColor="@android:color/white"
+            android:textSize="12sp" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

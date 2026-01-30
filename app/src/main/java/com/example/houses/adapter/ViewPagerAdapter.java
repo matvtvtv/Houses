@@ -6,6 +6,7 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import com.example.houses.ui.ChatMessageFragment;
+import com.example.houses.ui.ExchangeFragment;
 import com.example.houses.ui.SettingsFragment;
 import com.example.houses.ui.StatsChartFragment;
 import com.example.houses.ui.StatsFragment;
@@ -23,7 +24,7 @@ public class ViewPagerAdapter extends FragmentStateAdapter {
         if (position == 0) return new TaskFragment();
         if (position == 1) return new ChatMessageFragment();
         if (position == 2) return new StatsFragment();
-        if (position == 3) return new StatsChartFragment();
+        if (position == 3) return new ExchangeFragment();
         return new SettingsFragment();
     }
 

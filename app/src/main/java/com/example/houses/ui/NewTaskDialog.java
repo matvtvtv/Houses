@@ -112,7 +112,7 @@ public class NewTaskDialog extends Dialog {
         btnCancel = findViewById(R.id.btnCancelTask);
 
         spinnerTargetUser = findViewById(R.id.spinnerTargetUser);
-        setupUserSpinner();
+
 
         preferences = getContext().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         userLogin = preferences.getString("login", "1");
@@ -156,6 +156,7 @@ public class NewTaskDialog extends Dialog {
         btnEndTime = findViewById(R.id.btnEndTime);
 
         tvToggleExtra.setOnClickListener(v -> {
+            setupUserSpinner();
             boolean show = cardExtra.getVisibility() == View.GONE;
             cardExtra.setVisibility(show ? View.VISIBLE : View.GONE);
             tvToggleExtra.setText(

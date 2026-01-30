@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:id="@+id/fragmentStat"
     android:background="@color/bg"
     android:padding="16dp">
 
@@ -12,11 +12,20 @@
         android:text=" Рейтинг пользователей"
         android:textSize="24sp"
         android:textStyle="bold"
+        android:textColor="@color/white"
         android:layout_marginBottom="16dp"/>
 
+    <!-- Контейнер для CHILD графика -->
+    <FrameLayout
+        android:id="@+id/fragmentStatContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- RecyclerView для рейтинга не-CHILD -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerStats"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
-
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
 </LinearLayout>

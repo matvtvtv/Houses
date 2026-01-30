@@ -23,6 +23,7 @@ import com.example.houses.DB.DatabaseHelper;
 import com.example.houses.R;
 import com.example.houses.adapter.ChatMessageAdapter;
 import com.example.houses.model.ChatMessage;
+import com.example.houses.model.ExchangeOffer;
 import com.example.houses.model.TaskInstanceDto;
 import com.example.houses.webSocket.StompClient;
 import com.google.gson.Gson;
@@ -115,7 +116,6 @@ public class ChatMessageFragment extends Fragment {
                 }
             }
 
-
             @Override
             public void onChatMessage(ChatMessage message) {
                 if (!isAdded()) return;
@@ -132,6 +132,13 @@ public class ChatMessageFragment extends Fragment {
             public void onTaskInstance(TaskInstanceDto taskInstance) {
                 if (!isAdded()) return;
                 Log.d("ChatMessageFragment", "Received TaskInstance: " + taskInstance.getInstanceId());
+            }
+
+
+            @Override
+            public void onExchangeUpdate(ExchangeOffer offer) {
+                // В ChatMessageFragment этот метод не используется, оставь пустым
+                // или можно игнорировать, если не нужно показывать обмены в чате
             }
 
             @Override

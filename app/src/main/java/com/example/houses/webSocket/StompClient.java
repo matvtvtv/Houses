@@ -6,11 +6,17 @@ import android.os.Looper;
 import android.util.Log;
 
 import com.example.houses.model.ChatMessage;
+import com.example.houses.model.ExchangeOffer;
 import com.example.houses.model.Task;
 import com.example.houses.model.TaskInstanceDto;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializer;
 import com.google.gson.JsonSyntaxException;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +37,14 @@ public class StompClient {
     private final OkHttpClient client;
     private WebSocket ws;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final Gson gson = new Gson();
+
+    // ИСПРАВЛЕНО: Gson с поддержкой Instant
+    private final Gson gson = new GsonBuilder()
+            .registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, typeOfT, context) ->
+                    Instant.parse(json.getAsString()))
+            .registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (src, typeOfSrc, context) ->
+                    new JsonPrimitive(src.toString()))
+            .create();
 
     private StompListener listener;
     private boolean connected = false;
@@ -49,6 +62,7 @@ public class StompClient {
         void onConnected();
         void onChatMessage(ChatMessage message);
         void onTaskInstance(TaskInstanceDto instance);
+        void onExchangeUpdate(ExchangeOffer offer);
         void onError(String reason);
     }
 
@@ -87,6 +101,11 @@ public class StompClient {
                 connecting = false;
                 postError(t != null ? t.getMessage() : "Unknown error");
                 reconnect();
+            }
+
+            @Override
+            public void onClosing(WebSocket webSocket, int code, String reason) {
+                connected = false;
             }
 
             @Override
@@ -132,6 +151,9 @@ public class StompClient {
                         } else if (destination.startsWith("/topic/tasks/")) {
                             TaskInstanceDto inst = gson.fromJson(body, TaskInstanceDto.class);
                             postTaskInstance(inst);
+                        } else if (destination.startsWith("/topic/exchange/")) {
+                            ExchangeOffer offer = gson.fromJson(body, ExchangeOffer.class);
+                            postExchangeUpdate(offer);
                         }
                     } catch (JsonSyntaxException ex) {
                         Log.e(TAG, "JSON parse error: " + ex.getMessage());
@@ -177,13 +199,18 @@ public class StompClient {
         });
     }
 
+    private void postExchangeUpdate(ExchangeOffer offer) {
+        mainHandler.post(() -> {
+            if (listener != null) listener.onExchangeUpdate(offer);
+        });
+    }
+
     private void postError(String reason) {
         mainHandler.post(() -> {
             if (listener != null) listener.onError(reason != null ? reason : "Unknown error");
         });
     }
 
-    // --- Subscribe / Send ---
     public void subscribe(String destination) {
         if (!connected || ws == null) return;
         String id = "sub-" + UUID.randomUUID();
@@ -199,6 +226,14 @@ public class StompClient {
     public void subscribeToTasks(String chatLogin) {
         if (chatLogin == null || chatLogin.isEmpty()) return;
         subscribe("/topic/tasks/" + chatLogin);
+    }
+
+    public void subscribeToExchange(String chatLogin) {
+        if (chatLogin == null || chatLogin.isEmpty()) return;
+        String id = "sub-" + UUID.randomUUID();
+        ws.send("SUBSCRIBE\nid:" + id +
+                "\ndestination:/topic/exchange/" + chatLogin +
+                "\n\n\u0000");
     }
 
     public void send(String destination, Object payload) {
@@ -242,12 +277,13 @@ public class StompClient {
             connected = false;
             ws = null;
         }
+        mainHandler.removeCallbacksAndMessages(null);
     }
 
     public static class MessageDTO {
         public String sender;
         public String content;
-        public String image; // base64 изображения
+        public String image;
 
         public MessageDTO(String sender, String content, String image) {
             this.sender = sender;

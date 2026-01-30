@@ -51,6 +51,10 @@ public class DateAdapter extends RecyclerView.Adapter<DateAdapter.DayVH> {
                 .getDisplayName(TextStyle.SHORT, new Locale("ru"));
         h.tvDay.setText(dayName);
 
+        String monthName = item.date.getMonth()
+                .getDisplayName(TextStyle.SHORT, new Locale("ru"));
+        h.tvMonth.setText(monthName);
+
         h.itemView.setSelected(item.selected);
 
         h.itemView.setOnClickListener(v -> {
@@ -61,18 +65,20 @@ public class DateAdapter extends RecyclerView.Adapter<DateAdapter.DayVH> {
         });
     }
 
+
     @Override
     public int getItemCount() {
         return days.size();
     }
 
     static class DayVH extends RecyclerView.ViewHolder {
-        TextView tvDay, tvDate;
+        TextView tvDay, tvDate, tvMonth;
 
         DayVH(@NonNull View v) {
             super(v);
             tvDay = v.findViewById(R.id.tvDay);
             tvDate = v.findViewById(R.id.tvDate);
+            tvMonth = v.findViewById(R.id.tvMonth);
             Log.d("DateAdapter.DayVH", "ViewHolder created");
         }
     }
