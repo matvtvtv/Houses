@@ -13,7 +13,9 @@ public class TaskInstanceDto {
     // instance fields
     public Long instanceId;
     public String taskDate; // yyyy-MM-dd
-    public boolean completed;
+    public Boolean completed;
+    public Boolean started;
+    public Boolean confirmedByParent;
     public String comment;
     public List<String> photoBase64;
 
@@ -34,6 +36,9 @@ public class TaskInstanceDto {
     public int importance;
 
     public String templateUserLogin;
+
+    public boolean reminderSent;
+
 
     // пустой конструктор нужен для Gson
     public TaskInstanceDto() {}

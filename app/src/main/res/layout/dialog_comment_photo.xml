@@ -2,7 +2,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FDFBFF"> <LinearLayout
+    android:background="@drawable/bg_dialog_corners"
+    >
+    <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -14,7 +16,7 @@
         android:text="Завершение задачи"
         android:textSize="24sp"
         android:textStyle="bold"
-        android:textColor="#1C1B1F"
+        android:textColor="@color/white"
         android:layout_marginBottom="24dp"/>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -28,12 +30,16 @@
         app:boxCornerRadiusBottomStart="16dp"
         app:boxCornerRadiusBottomEnd="16dp"
         app:counterEnabled="true"
-        app:counterMaxLength="300">
+        app:counterMaxLength="255"
+        android:textColorHint="#757575"
+        app:hintTextColor="#8E54E9">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/editComment"
             android:layout_width="match_parent"
             android:layout_height="160dp"
+            android:textColor="@color/white"
+
             android:gravity="top"
             android:inputType="textMultiLine"
             android:padding="16dp" />
@@ -45,7 +51,7 @@
         android:text="Фотоотчет"
         android:layout_marginTop="24dp"
         android:textStyle="bold"
-        android:textColor="#49454F"/>
+        android:textColor="@color/white"/>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnAddPhoto"
@@ -74,28 +80,31 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:layout_marginTop="40dp"
         >
+
+
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Сохранить"
+            app:cornerRadius="16dp"
+            android:backgroundTint="#8E54E9"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"/>
+
+
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancel"
             style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:layout_weight="1"
             android:text="Отмена"
-            android:textColor="#BA1A1A"/>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSave"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="0dp"
-            android:layout_height="56dp"
-            android:layout_weight="1.5"
-            android:text="Отправить"
-            android:textStyle="bold"
-            app:cornerRadius="16dp"/>
+            android:textColor="#FF5555"/>
 
     </LinearLayout>
 

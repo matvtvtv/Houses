@@ -1,20 +1,13 @@
 package com.example.houses.ui;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Rect;
 import android.os.Bundle;
-import android.text.Layout;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewParent;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -26,7 +19,6 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.houses.Notification.TaskForegroundService;
 import com.example.houses.Notification.TaskForegroundServiceHolder;
@@ -34,9 +26,6 @@ import com.example.houses.R;
 import com.example.houses.adapter.DateAdapter;
 import com.example.houses.adapter.TaskAdapter;
 import com.example.houses.model.ChatData;
-import com.example.houses.model.ChatMessage;
-import com.example.houses.model.DayItem;
-import com.example.houses.model.ExchangeOffer;
 import com.example.houses.model.TaskInstanceDto;
 import com.example.houses.webSocket.StompClient;
 import com.google.gson.Gson;
@@ -48,14 +37,12 @@ import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import java.util.HashMap;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -72,7 +59,6 @@ import android.os.Looper;
 public class TaskFragment extends Fragment {
 
     private static final String TAG = "TaskFragment";
-    // ИСПРАВЛЕНО: Убран пробел в конце URL
     private static final String SERVER_HTTP_TASKS = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/tasks/";
 
     private SharedPreferences preferences;
@@ -91,13 +77,10 @@ public class TaskFragment extends Fragment {
     private RecyclerView recyclerDays, recyclerTasks;
     private DateAdapter dateAdapter;
     private LocalDate selectedDate;
-    private ViewPager2 viewPager;
     private View rootView;
 
-    private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE;
     private final List<TaskInstanceDto> allTasks = new ArrayList<>();
 
-    private EditText editTitle, editDesc, editMoney;
     private ImageView btnCreate;
     private ActivityResultLauncher<String> pickPhotoLauncher;
     private CommentPhotoDialog currentDialog;
@@ -106,7 +89,6 @@ public class TaskFragment extends Fragment {
     private TextView textCoins;
 
     private Handler refreshHandler;
-    private Runnable refreshRunnable;
     private Runnable scheduledRefreshRunnable;
     private static final long REFRESH_INTERVAL_MS = 60_000L;
 
@@ -128,7 +110,6 @@ public class TaskFragment extends Fragment {
         String userRole = preferences.getString("role", "CHILD");
 
         httpClient = new OkHttpClient();
-        loadTasksRange(chatLogin, LocalDate.now(), LocalDate.now().plusDays(13));
 
         recyclerTasks = view.findViewById(R.id.recyclerTasks);
         rootLayout = view.findViewById(R.id.rootLayout);
@@ -142,43 +123,85 @@ public class TaskFragment extends Fragment {
         if ("CHILD".equals(userRole)) {
             coinContainer.setVisibility(View.VISIBLE);
             textCoins.setVisibility(View.VISIBLE);
-            loadUserMoney(userLogin,chatLogin);
+            loadUserMoney(userLogin, chatLogin);
         } else {
             btnCreate.setVisibility(View.VISIBLE);
             textCoins.setVisibility(View.GONE);
             coinContainer.setVisibility(View.GONE);
         }
 
-
+        // при создании адаптера — реализация listener'а:
         adapter = new TaskAdapter(userRole, userLogin, new TaskAdapter.OnTaskActionListener() {
             @Override
             public void onClaim(TaskInstanceDto instance, int position) {
+                // Взять: устанавливаем userLogin и отправляем на сервер (оптимистично)
                 instance.userLogin = userLogin;
-                updateTaskInstance(instance);
+                instance.started = false;
+                requireActivity().runOnUiThread(() -> adapter.refresh());
+                updateTaskInstance(instance); // PUT с userLogin и started
             }
 
             @Override
-            public void onComplete(TaskInstanceDto instance, int position) {
-                patchTaskInstanceStatus(instance.instanceId, true);
+            public void onStart(TaskInstanceDto instance, int position) {
+                // Начать: ставим started=true и отправляем
+                instance.started = true;
+                requireActivity().runOnUiThread(() -> adapter.refresh());
+                updateTaskInstance(instance); // PUT с started=true
             }
+
+            @Override
+            public void onFinish(TaskInstanceDto instance, int position) {
+                CommentPhotoDialog dialog = new CommentPhotoDialog(requireContext(),
+                        instance,
+                        (comment, photos) -> {
+                            // ваш существующий код сохранения
+                            instance.comment = comment;
+                            instance.photoBase64 = photos;
+                            instance.completed = true;
+                            updateTaskInstance(instance);
+                            requireActivity().runOnUiThread(() -> adapter.refresh());
+                        },
+                        pickPhotoLauncher,
+                        true // editable
+                );
+                currentDialog = dialog; // <-- важно!
+                dialog.setOnDismissListener(d -> currentDialog = null); // очищаем ссылку при закрытии
+                dialog.show();
+            }
+
 
             @Override
             public void onOpenComments(TaskInstanceDto instance, int position) {
-                currentDialog = new CommentPhotoDialog(
-                        requireContext(),
+                // Просмотр — если родитель, readonly, если исполнитель — editable only if it's his task and not yet completed
+                boolean editable = "CHILD".equals(userRole) && userLogin.equals(instance.userLogin) && !instance.completed;
+                CommentPhotoDialog dialog = new CommentPhotoDialog(requireContext(),
                         instance,
                         (comment, photos) -> {
+                            // ваш существующий код сохранения
                             instance.comment = comment;
                             instance.photoBase64 = photos;
+                            instance.completed = true;
                             updateTaskInstance(instance);
+                            requireActivity().runOnUiThread(() -> adapter.refresh());
                         },
-                        pickPhotoLauncher
+                        pickPhotoLauncher,
+                        editable
                 );
-                currentDialog.show();
+
+                currentDialog = dialog; // <-- важно!
+                dialog.setOnDismissListener(d -> currentDialog = null); // очищаем ссылку при закрытии
+                dialog.show();
+            }
+            @Override
+            public void onConfirmByParent(TaskInstanceDto instance, int position) {
+                // можно показать диалог подтверждения у родителя, затем:
+                confirmTaskOnServer(instance.instanceId, instance, position);
             }
         });
 
+
         recyclerTasks.setAdapter(adapter);
+
 
         selectedDate = LocalDate.now();
         adapter.setSelectedDate(selectedDate);
@@ -218,7 +241,7 @@ public class TaskFragment extends Fragment {
                     }
 
                     if ("CHILD".equals(userRole)) {
-                        loadUserMoney(userLogin,chatLogin);
+                        loadUserMoney(userLogin, chatLogin);
                     }
 
                     boolean isMyTask =
@@ -235,14 +258,13 @@ public class TaskFragment extends Fragment {
                 });
             }
 
-            // ДОБАВЬ ЭТОТ МЕТОД:
             @Override
-            public void onExchangeUpdate(ExchangeOffer offer) {
-                // Не используется в TaskFragment, оставляем пустым
+            public void onExchangeUpdate(com.example.houses.model.ExchangeOffer offer) {
+                // noop
             }
 
             @Override
-            public void onChatMessage(ChatMessage m) {}
+            public void onChatMessage(com.example.houses.model.ChatMessage m) {}
 
             @Override
             public void onError(String reason) {
@@ -250,9 +272,11 @@ public class TaskFragment extends Fragment {
             }
         });
 
-
-
         stompClient.connect();
+
+        // загрузим задачи в диапазоне (после инициализации адаптера)
+        loadTasksRange(chatLogin, LocalDate.now(), LocalDate.now().plusDays(13));
+
         refreshHandler = new Handler(Looper.getMainLooper());
         scheduleSmartRefresh();
     }
@@ -289,7 +313,8 @@ public class TaskFragment extends Fragment {
             }
         });
     }
-    private void loadUserMoney(String userLogin,String chatLogin) {
+
+    private void loadUserMoney(String userLogin, String chatLogin) {
         String url = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chats_data/get_chats_users/" + chatLogin;
 
         Request request = new Request.Builder()
@@ -309,19 +334,17 @@ public class TaskFragment extends Fragment {
 
                 String body = response.body().string();
 
-                // Парсим как список
                 Type listType = new TypeToken<List<ChatData>>(){}.getType();
                 List<ChatData> users = gson.fromJson(body, listType);
 
                 if (users != null) {
                     for (ChatData user : users) {
-                        if(user.getUserLogin().equals(userLogin)) {
+                        if (user.getUserLogin().equals(userLogin)) {
                             if (!isAdded()) return;
 
                             requireActivity().runOnUiThread(() -> {
                                 if (textCoins != null) {
                                     textCoins.setText(String.valueOf(user.getMoney()));
-
                                 }
                             });
                             break;
@@ -331,6 +354,52 @@ public class TaskFragment extends Fragment {
             }
         });
     }
+    private void confirmTaskOnServer(Long instanceId, TaskInstanceDto instance, int position) {
+        if (instanceId == null) {
+            Log.e(TAG, "Cannot confirm task: instanceId is null");
+            return;
+        }
+
+        // правильный эндпоинт в контроллере: @PatchMapping("/{id}/confirm")
+        String url = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/tasks/" + instanceId + "/confirm";
+        Log.d(TAG, "Confirm URL: " + url);
+
+        // OkHttp требует body для PATCH — отправляем пустой JSON
+        RequestBody body = RequestBody.create("{}", MediaType.parse("application/json"));
+        Request req = new Request.Builder()
+                .url(url)
+                .patch(body)
+                .build();
+
+        httpClient.newCall(req).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                Log.e(TAG, "Confirm request failed", e);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                int code = response.code();
+                Log.d(TAG, "Confirm response code: " + code);
+                String respBody = response.body() != null ? response.body().string() : null;
+                Log.d(TAG, "Confirm response body: " + respBody);
+
+                if (!response.isSuccessful()) {
+                    Log.e(TAG, "Confirm error: " + code + ", body: " + respBody);
+                    response.close();
+                    return;
+                }
+
+
+                instance.confirmedByParent = true;
+                requireActivity().runOnUiThread(() -> adapter.addOrUpdate(instance));
+
+                response.close();
+            }
+        });
+    }
+
+
 
 
     private void showNewTaskDialog(String chatLogin, List<ChatData> users, String currentUserRole) {
@@ -382,14 +451,25 @@ public class TaskFragment extends Fragment {
     }
 
     private void updateTaskInstance(TaskInstanceDto instance) {
-        // ИСПРАВЛЕНО: Убран пробел в конце URL
+        if (instance == null || instance.instanceId == null) {
+            Log.e(TAG, "updateTaskInstance: instance or instanceId is null");
+            return;
+        }
+
+        // ВАЖНО: правильный PUT-эндпоинт на бекенде:
+        // @PutMapping("/instance/{instanceId}")
         String url = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/tasks/instance/" + instance.instanceId;
+        Log.d(TAG, "Update URL: " + url);
 
         Map<String, Object> payload = new HashMap<>();
-        payload.put("comment", instance.comment);
-        payload.put("photoBase64", instance.photoBase64);
-        payload.put("completed", instance.completed);
-        payload.put("userLogin", instance.userLogin);
+        payload.put("comment", instance.comment != null ? instance.comment : "");
+        payload.put("photoBase64", instance.photoBase64 != null ? instance.photoBase64 : new ArrayList<>());
+        payload.put("userLogin", instance.userLogin != null ? instance.userLogin : "");
+
+        // Отправляем явные boolean (false если null), чтобы Jackson не пытался писать null в примитив
+        payload.put("completed", instance.completed != null && instance.completed);
+        payload.put("started", instance.started != null && instance.started);
+        payload.put("confirmedByParent", instance.confirmedByParent != null && instance.confirmedByParent);
 
         String json = gson.toJson(payload);
         RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
@@ -407,13 +487,15 @@ public class TaskFragment extends Fragment {
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                if (!response.isSuccessful()) {
-                    Log.e(TAG, "Update error: " + response.code());
-                }
+                Log.d(TAG, "Update response code: " + response.code());
+                String respBody = response.body() != null ? response.body().string() : null;
+                Log.d(TAG, "Update response body: " + respBody);
                 response.close();
             }
         });
     }
+
+
 
     private void scheduleSmartRefresh() {
         if (refreshHandler == null) refreshHandler = new Handler(Looper.getMainLooper());
@@ -431,8 +513,17 @@ public class TaskFragment extends Fragment {
 
         scheduledRefreshRunnable = () -> {
             if (adapter != null) {
+                // 1) отправляем напоминания за час до старта
+                List<TaskInstanceDto> reminders = adapter.getTasksForOneHourReminder();
+                for (TaskInstanceDto t : reminders) {
+                    sendReminder(t);
+                    adapter.markReminderSent(t.instanceId);
+                }
+
+                // 2) обновляем видимые данные
                 adapter.refresh();
             }
+            // рекурсивно планируем дальше
             scheduleSmartRefresh();
         };
 
@@ -440,19 +531,29 @@ public class TaskFragment extends Fragment {
         Log.d(TAG, "Scheduled smart refresh in ms: " + delay);
     }
 
-    private void cancelSmartRefresh() {
-        if (refreshHandler != null && scheduledRefreshRunnable != null) {
-            refreshHandler.removeCallbacks(scheduledRefreshRunnable);
-            scheduledRefreshRunnable = null;
+    private void sendReminder(TaskInstanceDto task) {
+        if (task == null) return;
+
+        Context ctx = requireContext();
+
+        // стартуем foreground service, если ещё не запущен
+        if (TaskForegroundServiceHolder.hService == null) {
+            Intent serviceIntent = new Intent(ctx, TaskForegroundService.class);
+            ctx.startForegroundService(serviceIntent);
         }
+
+        // используем существующий хелпер для создания/показa уведомления
+        TaskForegroundServiceHolder.enqueue(task, ctx);
     }
 
+
+
     private void initDaysList() {
-        List<DayItem> days = new ArrayList<>();
+        List<com.example.houses.model.DayItem> days = new ArrayList<>();
         LocalDate today = LocalDate.now();
 
         for (int i = 0; i < 14; i++) {
-            days.add(new DayItem(today.plusDays(i), i == 0));
+            days.add(new com.example.houses.model.DayItem(today.plusDays(i), i == 0));
         }
 
         dateAdapter = new DateAdapter(days, item -> {
@@ -463,51 +564,13 @@ public class TaskFragment extends Fragment {
         recyclerDays.setAdapter(dateAdapter);
     }
 
-    private void patchTaskInstanceStatus(Long instanceId, boolean completed) {
-        // ИСПРАВЛЕНО: Убран пробел в конце URL
-        String url = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/tasks/instance/" + instanceId + "/status";
-
-        Map<String, Boolean> payload = new HashMap<>();
-        payload.put("completed", completed);
-
-        String json = gson.toJson(payload);
-        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
-
-        Request req = new Request.Builder()
-                .url(url)
-                .patch(body)
-                .build();
-
-        httpClient.newCall(req).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                Log.e(TAG, "Failed to update task status", e);
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                if (!response.isSuccessful()) {
-                    Log.e(TAG, "Status update error: " + response.code());
-                }
-                response.close();
-            }
-        });
-    }
-
-    @Nullable
-    private ViewPager2 findParentViewPager(View view) {
-        ViewParent parent = view.getParent();
-        while (parent != null) {
-            if (parent instanceof ViewPager2) return (ViewPager2) parent;
-            parent = parent.getParent();
-        }
-        return null;
-    }
-
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        cancelSmartRefresh();
+        if (refreshHandler != null && scheduledRefreshRunnable != null) {
+            refreshHandler.removeCallbacks(scheduledRefreshRunnable);
+            scheduledRefreshRunnable = null;
+        }
 
         if (stompClient != null) {
             stompClient.disconnect();
@@ -517,7 +580,6 @@ public class TaskFragment extends Fragment {
         rootView = null;
         allTasks.clear();
     }
-
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {

@@ -12,6 +12,8 @@ public class Task {
     private String description;
     private int money;
     private boolean completed;
+    public boolean started;
+    public boolean confirmedByParent;
     private boolean repeat;
     private String[] days;
     private String startTime;

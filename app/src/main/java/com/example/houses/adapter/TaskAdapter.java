@@ -1,34 +1,28 @@
 package com.example.houses.adapter;
 
-import android.content.Context;
-import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.houses.R;
 import com.example.houses.model.TaskInstanceDto;
-import com.example.houses.utils.ImageUtils;
-
-import java.time.LocalDate;
-import java.time.LocalTime;
+import com.google.android.material.button.MaterialButton;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
 
     public interface OnTaskActionListener {
-        void onClaim(TaskInstanceDto task, int position);
-        void onComplete(TaskInstanceDto task, int position);
+        void onClaim(TaskInstanceDto task, int position);   // "Взять"
+        void onStart(TaskInstanceDto task, int position);   // "Начать"
+        void onFinish(TaskInstanceDto task, int position);  // "Завершить" (открыть диалог сохранения)
+        void onConfirmByParent(TaskInstanceDto task, int position); // "Подтвердить" (parent)
         void onOpenComments(TaskInstanceDto task, int position);
     }
 
@@ -37,11 +31,13 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
     private final List<TaskInstanceDto> allItems = new ArrayList<>();
     private final List<TaskInstanceDto> visibleItems = new ArrayList<>();
 
-    private LocalDate selectedDate;
+    private java.time.LocalDate selectedDate;
     public String currentUserRole;
     public String currentUserLogin;
 
     private final OnTaskActionListener listener;
+
+    private final Set<Long> reminderSentIds = new HashSet<>();
 
     public TaskAdapter(String userRole, String userLogin, OnTaskActionListener listener) {
         this.currentUserRole = userRole;
@@ -49,8 +45,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         this.listener = listener;
     }
 
-    // ================== PUBLIC API ==================
-
+    // PUBLIC API
     public void setAll(List<TaskInstanceDto> list) {
         allItems.clear();
         if (list != null) allItems.addAll(list);
@@ -59,7 +54,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
 
     public void addOrUpdate(TaskInstanceDto task) {
         boolean updated = false;
-
+        if (task == null) return;
         for (int i = 0; i < allItems.size(); i++) {
             TaskInstanceDto t = allItems.get(i);
             if (t.instanceId != null && t.instanceId.equals(task.instanceId)) {
@@ -68,104 +63,87 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
                 break;
             }
         }
-
         if (!updated) allItems.add(task);
         applyFilter();
     }
 
-    public void setSelectedDate(LocalDate date) {
+    public void setSelectedDate(java.time.LocalDate date) {
         this.selectedDate = date;
         applyFilter();
-    }
-
-    // ================== FILTERING ==================
-
-    private void applyFilter() {
-        visibleItems.clear();
-
-        for (TaskInstanceDto t : allItems) {
-
-
-            // 1. ФИЛЬТР ПО targetLogin (строгое правило)
-            if (t.targetLogin != null && !t.targetLogin.isEmpty()) {
-                if (!t.targetLogin.equals(currentUserLogin)) {
-                    continue; // задача НЕ для этого пользователя
-                }
-            }
-
-
-            // 2. Дата
-            if (selectedDate != null && t.taskDate != null) {
-                try {
-                    LocalDate taskDate = LocalDate.parse(t.taskDate);
-                    if (!selectedDate.equals(taskDate)) continue;
-                } catch (Exception e) {
-                    continue;
-                }
-            }
-
-
-
-
-
-            visibleItems.add(t);
-        }
-
-        notifyDataSetChanged();
-    }
-
-    private boolean isTimeInRange(String start, String end) {
-        try {
-            LocalTime now = LocalTime.now();
-
-            // Если есть startTime и сейчас раньше — не показываем
-            if (start != null) {
-                LocalTime s = LocalTime.parse(start);
-                if (now.isBefore(s)) {
-                    Log.d(TAG, "Too early, hiding task");
-                    return false;
-                }
-            }
-
-            // Если есть endTime и сейчас позже — не показываем
-            if (end != null) {
-                LocalTime e = LocalTime.parse(end);
-                if (now.isAfter(e)) {
-                    Log.d(TAG, "Too late, hiding task");
-                    return false;
-                }
-            }
-
-            return true; // В диапазоне или нет ограничений
-
-        } catch (Exception e) {
-            Log.e(TAG, "Time parse error: " + e.getMessage());
-            return true; // При ошибке парсинга показываем на всякий случай
-        }
     }
 
     public void refresh() {
         applyFilter();
     }
 
-    private boolean matchesPartDay(String partDay) {
-        if (partDay == null) return true;
+    public List<TaskInstanceDto> getTasksForOneHourReminder() {
+        List<TaskInstanceDto> result = new ArrayList<>();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalTime now = java.time.LocalTime.now();
 
-        int hour = LocalTime.now().getHour();
+        for (TaskInstanceDto t : allItems) {
+            try {
+                if (t == null) continue;
+                if (Boolean.TRUE.equals(t.completed)) continue;
+                if (t.startTime == null || t.startTime.isEmpty()) continue;
+                if (t.instanceId == null) continue;
+                if (reminderSentIds.contains(t.instanceId)) continue;
+                if (t.taskDate == null || t.taskDate.isEmpty()) continue;
 
-        switch (partDay) {
-            case "MORNING": return hour >= 6 && hour < 12;
-            case "DAY":     return hour >= 12 && hour < 18;
-            case "EVENING": return hour >= 18 && hour < 23;
-            default: return true;
+                java.time.LocalDate taskDate = java.time.LocalDate.parse(t.taskDate);
+                if (!taskDate.equals(today)) continue;
+
+                java.time.LocalTime start = java.time.LocalTime.parse(t.startTime);
+                long minutes = java.time.Duration.between(now, start).toMinutes();
+
+                if (minutes > 0 && minutes <= 60) {
+                    result.add(t);
+                }
+            } catch (Exception ex) {
+                Log.d(TAG, "Reminder parse error: " + ex.getMessage());
+            }
         }
+
+        return result;
     }
 
+    public void markReminderSent(Long instanceId) {
+        if (instanceId == null) return;
+        reminderSentIds.add(instanceId);
+    }
+
+    public void clearReminderMarks() {
+        reminderSentIds.clear();
+    }
+
+    // FILTER
+    private void applyFilter() {
+        visibleItems.clear();
+        for (TaskInstanceDto t : allItems) {
+            if (t == null) continue;
+            if ("CHILD".equals(currentUserRole)) {
+                if (t.targetLogin != null && !t.targetLogin.isEmpty()) {
+                    if (!t.targetLogin.equals(currentUserLogin)) continue;
+                }
+            }
+            if (selectedDate != null && t.taskDate != null) {
+                try {
+                    java.time.LocalDate taskDate = java.time.LocalDate.parse(t.taskDate);
+                    if (!selectedDate.equals(taskDate)) continue;
+                } catch (Exception e) {
+                    continue;
+                }
+            }
+            visibleItems.add(t);
+        }
+        notifyDataSetChanged();
+    }
+
+    // time threshold helper (unchanged)
     public long getMillisUntilNextTimeThreshold() {
         try {
             java.time.LocalTime now = java.time.LocalTime.now();
             java.time.Duration best = null;
-
             for (TaskInstanceDto t : allItems) {
                 if (t.startTime != null && !t.startTime.isEmpty()) {
                     try {
@@ -186,18 +164,15 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
                     } catch (Exception ignored) {}
                 }
             }
-
             if (best == null) return -1;
             long millis = best.toMillis();
-            // добавим небольшой буфер 1 сек
             return Math.max(0, millis + 1000);
         } catch (Exception e) {
             return -1;
         }
     }
 
-    // ================== ADAPTER ==================
-
+    // ADAPTER
     @Override
     public int getItemCount() {
         return visibleItems.size();
@@ -206,170 +181,158 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_task, parent, false);
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_task, parent, false);
         return new VH(v);
     }
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
         TaskInstanceDto t = visibleItems.get(position);
+        if (t == null) return;
 
-        // ===== Цвет по важности =====
-        int importance = t.importance > 0 ? t.importance : 1;
-        switch (importance) {
-            case 3:
-                holder.itemView.setBackgroundResource(R.drawable.bg_task_important);
-                break;
-            case 2:
-                holder.itemView.setBackgroundResource(R.drawable.bg_task_medium);
-                break;
-            default:
-                holder.itemView.setBackgroundResource(R.drawable.bg_task_normal);
-        }
+        // 1. Сброс состояния к дефолту (белый фон, стандартные цвета)
+        resetToDefaultStyle(holder);
 
-        // ===== Текст =====
+        // Заполнение данных
         holder.title.setText(t.title != null ? t.title : "");
         holder.desc.setText(t.description != null ? t.description : "");
-        holder.desc.setVisibility(
-                t.description != null && !t.description.isEmpty() ? View.VISIBLE : View.GONE
-        );
+        holder.money.setText(t.money > 0 ? ("+" + t.money) : "");
 
-        holder.money.setText(String.valueOf(t.money));
-
-        // ===== Комментарий =====
-        if (t.comment != null && !t.comment.isEmpty()) {
-            holder.tvComment.setText(t.comment);
-            holder.tvComment.setVisibility(View.VISIBLE);
-        } else {
-            holder.tvComment.setVisibility(View.GONE);
-        }
-
-        // ===== Время / Часть дня =====
-        StringBuilder timeBuilder = new StringBuilder();
+        // Управление временем
         if (t.startTime != null && !t.startTime.isEmpty()) {
-            timeBuilder.append(t.startTime);
-        }
-        if (t.endTime != null && !t.endTime.isEmpty()) {
-            if (timeBuilder.length() > 0) {
-                timeBuilder.append(" - ");
-            } else {
-                timeBuilder.append("До ");
-            }
-            timeBuilder.append(t.endTime);
-        }
-
-        // Если времени нет, но есть часть дня
-        if (timeBuilder.length() == 0 && t.partDay != null && !t.partDay.isEmpty()) {
-            switch (t.partDay) {
-                case "MORNING": timeBuilder.append("☀️ Утро (6:00-12:00)"); break;
-                case "DAY":     timeBuilder.append("🌤 День (12:00-18:00)"); break;
-                case "EVENING": timeBuilder.append("🌙 Вечер (18:00-23:00)"); break;
-                default:        timeBuilder.append(t.partDay);
-            }
-        }
-
-        if (timeBuilder.length() > 0) {
-            holder.tvTaskTime.setText(timeBuilder.toString());
             holder.tvTaskTime.setVisibility(View.VISIBLE);
+            holder.tvTaskTime.setText(t.startTime + (t.endTime != null && !t.endTime.isEmpty() ? " – " + t.endTime : ""));
         } else {
             holder.tvTaskTime.setVisibility(View.GONE);
         }
 
-        // ===== Кто выполняет =====
-        if (t.userLogin != null && !t.userLogin.isEmpty()) {
-            holder.tvStartedBy.setText("Выполняет: " + t.userLogin);
-            holder.tvStartedBy.setVisibility(View.VISIBLE);
-        } else {
-            holder.tvStartedBy.setVisibility(View.GONE);
+        // 2. Логика статусов и ЦВЕТОВОЙ ПОДСВЕТКИ
+        if (Boolean.TRUE.equals(t.confirmedByParent)) {
+            // --- ПОДТВЕРЖДЕНО (СЕРЫЙ) ---
+            applyStatusTheme(holder, "Статус: Подтверждена", 0xFFF5F5F5, 0xFFBDBDBD, 0xFFE0E0E0, 0xFF9E9E9E);
+            makeTaskGray(holder);
         }
-
-
-        // ===== Дни повтора =====
-        if (t.repeat && t.repeatDays != null && !t.repeatDays.isEmpty()) {
-            holder.repeatDays.setText(String.join(", ", t.repeatDays));
-            holder.repeatDays.setVisibility(View.VISIBLE);
-        } else {
-            holder.repeatDays.setVisibility(View.GONE);
+        else if (Boolean.TRUE.equals(t.completed)) {
+            // --- ЗАВЕРШЕНО (ЗЕЛЕНЫЙ) ---
+            applyStatusTheme(holder, "Статус: Проверьте!", 0xFFE8F5E9, 0xFF2E7D32, 0xFF81C784, 0xFFC8E6C9);
+            setupParentButtons(holder, t, position);
         }
-
-        // ===== Фото =====
-        holder.photoContainer.removeAllViews();
-        if (t.photoBase64 != null && !t.photoBase64.isEmpty()) {
-            holder.photoContainer.setVisibility(View.VISIBLE);
-            for (String base64 : t.photoBase64) {
-                ImageView iv = new ImageView(holder.itemView.getContext());
-                int size = (int) (80 * holder.itemView.getResources().getDisplayMetrics().density);
-                LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(size, size);
-                p.setMargins(0, 0, 16, 0);
-                iv.setLayoutParams(p);
-                iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                iv.setBackgroundResource(R.drawable.bg_photo_rounding);
-                iv.setImageBitmap(ImageUtils.base64ToBitmap(base64));
-                holder.photoContainer.addView(iv);
-            }
-        } else {
-            holder.photoContainer.setVisibility(View.GONE);
+        else if (t.userLogin == null || t.userLogin.isEmpty()) {
+            // --- НЕ ВЗЯТА (СТАНДАРТ/ФИОЛЕТОВЫЙ) ---
+            applyStatusTheme(holder, "Статус: Ожидает", 0xFFFFFFFF, 0xFF8E54E9, 0xFFF0F0F0, 0xFFF3E5F5);
+            setupChildButtons(holder, t, position, false);
         }
-
-        // ===== Статус =====
-        holder.cbCompleted.setChecked(t.completed);
-        holder.itemView.setAlpha(t.completed ? 0.6f : 1f);
-
-        // ===== Кнопки =====
-        holder.btnRespond.setVisibility(View.GONE);
-
-        if (!t.completed) {
-            if ("PARENT".equals(currentUserRole) || "ADMIN".equals(currentUserRole)) {
-                holder.btnRespond.setText("Подтвердить");
-                holder.btnRespond.setVisibility(View.VISIBLE);
-                holder.btnRespond.setOnClickListener(v ->
-                        listener.onComplete(t, position));
-            } else {
-                // Для обычных пользователей - проверяем, назначена ли задача им
-                boolean isMyTask = (t.targetLogin == null || t.targetLogin.isEmpty())
-                        || t.targetLogin.equals(currentUserLogin);
-
-                if (isMyTask) {
-                    if (t.userLogin == null || t.userLogin.isEmpty()) {
-                        holder.btnRespond.setText("Взять");
-                        holder.btnRespond.setVisibility(View.VISIBLE);
-                        holder.btnRespond.setOnClickListener(v ->
-                                listener.onClaim(t, position));
-                    } else if (currentUserLogin.equals(t.userLogin)) {
-                        holder.btnRespond.setText("В процессе");
-                        holder.btnRespond.setVisibility(View.VISIBLE);
-                        holder.btnRespond.setEnabled(false);
-                    }
-                }
-            }
+        else if (Boolean.TRUE.equals(t.started)) {
+            // --- В ПРОЦЕССЕ (ЖЕЛТЫЙ) ---
+            applyStatusTheme(holder, "Статус: В работе — " + t.userLogin, 0xFFFFFDE7, 0xFFF57F17, 0xFFFFF176, 0xFFFFF9C4);
+            setupChildButtons(holder, t, position, true);
         }
-
-        holder.btnComments.setOnClickListener(v ->
-                listener.onOpenComments(t, holder.getBindingAdapterPosition()));
+        else {
+            // --- ПРОСТО ВЗЯТА (ГОЛУБОЙ) ---
+            applyStatusTheme(holder, "Статус: Взята — " + t.userLogin, 0xFFE3F2FD, 0xFF1976D2, 0xFF64B5F6, 0xFFBBDEFB);
+            setupChildButtons(holder, t, position, true);
+        }
     }
 
-    // ================== VIEW HOLDER ==================
+    /**
+     * Универсальный метод для смены "темы" карточки
+     */
+    private void applyStatusTheme(VH holder, String statusText, int cardBg, int accentColor, int strokeColor, int badgeBg) {
+        holder.tvStartedBy.setText(statusText);
+        holder.cardView.setCardBackgroundColor(cardBg);
+        holder.cardView.setStrokeColor(strokeColor);
+
+        // Меняем цвет текста и фона баджа статуса
+        holder.tvStartedBy.setTextColor(accentColor);
+        holder.tvStartedBy.setBackgroundTintList(ColorStateList.valueOf(badgeBg));
+    }
+    private void setupParentButtons(VH holder, TaskInstanceDto t, int position) {
+        holder.btnComments.setVisibility(View.VISIBLE);
+        holder.btnComments.setOnClickListener(v -> listener.onOpenComments(t, position));
+
+        if (("PARENT".equals(currentUserRole) || "ADMIN".equals(currentUserRole))) {
+            if (!Boolean.TRUE.equals(t.confirmedByParent)) {
+                holder.btnConfirm.setVisibility(View.VISIBLE);
+                holder.btnConfirm.setOnClickListener(v -> listener.onConfirmByParent(t, position));
+            }
+        }
+    }
+
+    private void setupChildButtons(VH holder, TaskInstanceDto t, int position, boolean isTaken) {
+        if (!"CHILD".equals(currentUserRole)) {
+            holder.btnComments.setVisibility(View.VISIBLE);
+            return;
+        }
+
+        if (!isTaken) {
+            holder.btnTake.setVisibility(View.VISIBLE);
+            holder.btnTake.setText("Взять");
+            holder.btnTake.setOnClickListener(v -> listener.onClaim(t, position));
+            holder.btnComments.setVisibility(View.VISIBLE);
+        } else if (currentUserLogin.equals(t.userLogin)) {
+            holder.btnStart.setVisibility(View.VISIBLE);
+            if (!Boolean.TRUE.equals(t.started)) {
+                holder.btnStart.setText("Начать");
+                holder.btnStart.setOnClickListener(v -> listener.onStart(t, position));
+            } else {
+                holder.btnStart.setText("Завершить");
+                holder.btnStart.setOnClickListener(v -> listener.onFinish(t, position));
+            }
+        }
+    }
+    private void resetToDefaultStyle(VH holder) {
+        holder.itemView.setAlpha(1f);
+        holder.cardView.setStrokeWidth(3); // чуть толще для видимости границ
+        holder.title.setTextColor(holder.defaultTitleColor);
+        holder.desc.setTextColor(holder.defaultDescColor);
+        holder.money.setTextColor(0xFF2E7D32); // Зеленый для денег всегда
+
+        holder.btnTake.setVisibility(View.GONE);
+        holder.btnStart.setVisibility(View.GONE);
+        holder.btnConfirm.setVisibility(View.GONE);
+        holder.btnComments.setVisibility(View.GONE);
+    }
+
+    private void makeTaskGray(VH holder) {
+        holder.itemView.setAlpha(0.6f);
+        holder.title.setTextColor(0xFF9E9E9E);
+        holder.desc.setTextColor(0xFFBDBDBD);
+        holder.money.setTextColor(0xFF9E9E9E);
+        // Скрываем все кнопки кроме результата
+        holder.btnTake.setVisibility(View.GONE);
+        holder.btnStart.setVisibility(View.GONE);
+        holder.btnConfirm.setVisibility(View.GONE);
+    }
 
     static class VH extends RecyclerView.ViewHolder {
-        TextView title, desc, money, repeatDays, tvComment, tvStartedBy, tvTaskTime;
-        CheckBox cbCompleted;
-        Button btnRespond, btnComments;
-        LinearLayout photoContainer;
+        com.google.android.material.card.MaterialCardView cardView;
+        TextView title, desc, money, tvTaskTime, tvStartedBy;
+        MaterialButton btnTake, btnStart, btnConfirm, btnComments;
+
+        // сохраняем цвета по-умолчанию чтобы при recycle можно было вернуть
+        final int defaultTitleColor;
+        final int defaultDescColor;
+        final int defaultMoneyColor;
+        final int defaultStartedColor;
 
         VH(@NonNull View v) {
             super(v);
+            cardView = (com.google.android.material.card.MaterialCardView) v;
             title = v.findViewById(R.id.tvTaskTitle);
             desc = v.findViewById(R.id.tvTaskDesc);
             money = v.findViewById(R.id.tvTaskMoney);
-            repeatDays = v.findViewById(R.id.tvTaskRepeatDays);
-            cbCompleted = v.findViewById(R.id.cbTaskCompleted);
-            btnRespond = v.findViewById(R.id.btnRespond);
-            btnComments = v.findViewById(R.id.btnComments);
-            tvComment = v.findViewById(R.id.tvComment);
-            tvStartedBy = v.findViewById(R.id.tvStartedBy);
-            photoContainer = v.findViewById(R.id.photoContainer);
             tvTaskTime = v.findViewById(R.id.tvTaskTime);
+            tvStartedBy = v.findViewById(R.id.tvStartedBy);
+
+            btnTake = v.findViewById(R.id.btnTake);
+            btnStart = v.findViewById(R.id.btnStart);
+            btnConfirm = v.findViewById(R.id.btnConfirm);
+            btnComments = v.findViewById(R.id.btnComments);
+
+            defaultTitleColor = title.getCurrentTextColor();
+            defaultDescColor = desc.getCurrentTextColor();
+            defaultMoneyColor = money.getCurrentTextColor();
+            defaultStartedColor = tvStartedBy.getCurrentTextColor();
         }
     }
 }
