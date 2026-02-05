@@ -26,6 +26,7 @@ import com.example.houses.R;
 import com.example.houses.adapter.DateAdapter;
 import com.example.houses.adapter.TaskAdapter;
 import com.example.houses.model.ChatData;
+import com.example.houses.model.Task;
 import com.example.houses.model.TaskInstanceDto;
 import com.example.houses.webSocket.StompClient;
 import com.google.gson.Gson;
@@ -40,6 +41,7 @@ import java.lang.reflect.Type;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -55,6 +57,7 @@ import okhttp3.ResponseBody;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.widget.Toast;
 
 public class TaskFragment extends Fragment {
 
@@ -91,6 +94,9 @@ public class TaskFragment extends Fragment {
     private Handler refreshHandler;
     private Runnable scheduledRefreshRunnable;
     private static final long REFRESH_INTERVAL_MS = 60_000L;
+    private boolean isCreateDialogOpen = false;
+    public String chatLogin,userLogin,userRole;
+
 
     public TaskFragment() {}
 
@@ -105,9 +111,9 @@ public class TaskFragment extends Fragment {
 
         preferences = requireActivity()
                 .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
-        String chatLogin = preferences.getString("chatLogin", "1");
-        String userLogin = preferences.getString("login", "1");
-        String userRole = preferences.getString("role", "CHILD");
+        chatLogin = preferences.getString("chatLogin", "1");
+        userLogin = preferences.getString("login", "1");
+        userRole = preferences.getString("role", "CHILD");
 
         httpClient = new OkHttpClient();
 
@@ -197,7 +203,58 @@ public class TaskFragment extends Fragment {
                 // можно показать диалог подтверждения у родителя, затем:
                 confirmTaskOnServer(instance.instanceId, instance, position);
             }
+            @Override
+            public void onEdit(TaskInstanceDto instance, int position) {
+                Task prefill = new Task();
+                prefill.setTitle(instance.title);
+                prefill.setDescription(instance.description);
+                prefill.setMoney(instance.money);
+                prefill.setStartTime(instance.startTime);
+                prefill.setEndTime(instance.endTime);
+                prefill.setPartDay(instance.partDay);
+                prefill.setImportance(instance.importance);
+                prefill.setTargetLogin(instance.targetLogin);
+
+                if (instance.repeatDays != null) {
+                    prefill.setDays(instance.repeatDays.toArray(new String[0]));
+                    prefill.setRepeat(instance.repeat);
+                }
+                if (instance.templateId != null) {
+                    prefill.setId(instance.templateId); // Важно: сохраняем ID шаблона
+                }
+
+                NewTaskDialog editDialog = new NewTaskDialog(requireContext(), chatLogin, prefill, task -> {
+                    // Формируем payload для обновления
+                    Map<String, Object> payload = new HashMap<>();
+                    payload.put("title", task.getTitle());
+                    payload.put("description", task.getDescription());
+                    payload.put("money", task.getMoney());
+                    payload.put("repeat", task.isRepeat());
+                    payload.put("repeatDays", task.getDays() != null ? Arrays.asList(task.getDays()) : null);
+                    payload.put("startDate", task.getStartDate());
+                    payload.put("targetLogin", task.getTargetLogin());
+                    payload.put("importance", task.getImportance());
+                    payload.put("partDay", task.getPartDay());
+                    payload.put("startTime", task.getStartTime());
+                    payload.put("endTime", task.getEndTime());
+
+                    // Отправляем через HTTP PUT
+                    if (task.getId() != null) {
+                        updateTemplateByHttp(payload, task.getId());
+                    }
+                });
+
+                editDialog.setOnDismissListener(d -> {
+                    isCreateDialogOpen = false;
+                    btnCreate.setEnabled(true);
+                });
+
+                editDialog.show();
+            }
+
+
         });
+
 
 
         recyclerTasks.setAdapter(adapter);
@@ -214,8 +271,15 @@ public class TaskFragment extends Fragment {
         initDaysList();
 
         btnCreate.setOnClickListener(v -> {
+            if (isCreateDialogOpen) return;
+
+            isCreateDialogOpen = true;
+            btnCreate.setEnabled(false);
+
             loadChatUsersAndShowDialog(chatLogin, userRole);
         });
+
+
 
         if (stompClient == null) {
             stompClient = new StompClient(requireContext());
@@ -280,8 +344,43 @@ public class TaskFragment extends Fragment {
         refreshHandler = new Handler(Looper.getMainLooper());
         scheduleSmartRefresh();
     }
+    private void updateTemplateByHttp(Map<String, Object> payload, Long templateId) {
+        // ВАЖНО: убран пробел перед templateId
+        String url = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/tasks/template/" + templateId;
+        String json = gson.toJson(payload);
+        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
+        Request req = new Request.Builder().url(url).put(body).build();
 
-    private void loadChatUsersAndShowDialog(String chatLogin, String currentUserRole) {
+        httpClient.newCall(req).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                Log.e(TAG, "Failed to update template", e);
+                requireActivity().runOnUiThread(() ->
+                        Toast.makeText(requireContext(), "Ошибка сети", Toast.LENGTH_SHORT).show()
+                );
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                String respBody = response.body() != null ? response.body().string() : "";
+                Log.d(TAG, "Update template response: " + response.code());
+
+                requireActivity().runOnUiThread(() -> {
+                    if (response.isSuccessful()) {
+                        Toast.makeText(requireContext(), "Задача обновлена", Toast.LENGTH_SHORT).show();
+                        // Перезагружаем список задач
+                        loadTasksRange(chatLogin, selectedDate, selectedDate.plusDays(13));
+                    } else {
+                        Toast.makeText(requireContext(), "Ошибка: " + response.code(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+                response.close();
+            }
+        });
+    }
+
+
+private void loadChatUsersAndShowDialog(String chatLogin, String currentUserRole) {
         String url = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/chats_data/get_chats_users/" + chatLogin;
         Request req = new Request.Builder().url(url).build();
 
@@ -403,26 +502,28 @@ public class TaskFragment extends Fragment {
 
 
     private void showNewTaskDialog(String chatLogin, List<ChatData> users, String currentUserRole) {
+        if (!isAdded()) return;
+
         NewTaskDialog dialog = new NewTaskDialog(requireContext(), chatLogin, task -> {
             if (stompClient != null) {
                 stompClient.sendTask(chatLogin, task);
             }
         });
 
-        if (users != null && !users.isEmpty() &&
-                ("PARENT".equals(currentUserRole) || "ADMIN".equals(currentUserRole))) {
+        if (users != null && !users.isEmpty()
+                && ("PARENT".equals(currentUserRole) || "ADMIN".equals(currentUserRole))) {
 
-            String currentUserLogin = preferences.getString("login", "");
-            List<ChatData> filteredUsers = new ArrayList<>();
-            for (ChatData user : users) {
-                filteredUsers.add(user);
-            }
-
-            dialog.setChatUsers(filteredUsers);
+            dialog.setChatUsers(users);
         }
+
+        dialog.setOnDismissListener(d -> {
+            isCreateDialogOpen = false;   // 🔓 разблокируем
+            btnCreate.setEnabled(true);
+        });
 
         dialog.show();
     }
+
 
     private void loadTasksRange(String chatLogin, LocalDate from, LocalDate to) {
         String url = SERVER_HTTP_TASKS + chatLogin + "?from=" + from + "&to=" + to;

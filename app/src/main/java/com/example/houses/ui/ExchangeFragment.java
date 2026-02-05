@@ -27,11 +27,11 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializer;
-import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.time.Instant;
+import java.time.Month;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -44,19 +44,36 @@ import okhttp3.Response;
 public class ExchangeFragment extends Fragment {
 
     private static final String TAG = "ExchangeFragment";
-    // ИСПРАВЛЕНО: убраны пробелы в URL
     private static final String BASE_URL = "https://t7lvb7zl-8080.euw.devtunnels.ms/api/exchange/";
 
     private ExchangeAdapter adapter;
     private StompClient stomp;
-    private String chatLogin;
+    private String chatLogin,userRole;
     private OkHttpClient httpClient;
 
+    // ИСПРАВЛЕНО: добавлен адаптер для Month
     private Gson gson = new GsonBuilder()
             .registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, type, context) ->
                     Instant.parse(json.getAsString()))
             .registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (src, type, context) ->
                     new JsonPrimitive(src.toString()))
+            // Добавляем поддержку Month как числа и строки
+            .registerTypeAdapter(Month.class, (JsonDeserializer<Month>) (json, type, context) -> {
+                if (json.isJsonPrimitive()) {
+                    com.google.gson.JsonPrimitive primitive = json.getAsJsonPrimitive();
+                    if (primitive.isNumber()) {
+                        return Month.of(primitive.getAsInt());
+                    } else if (primitive.isString()) {
+                        String str = primitive.getAsString();
+                        try {
+                            return Month.of(Integer.parseInt(str));
+                        } catch (NumberFormatException e) {
+                            return Month.valueOf(str);
+                        }
+                    }
+                }
+                return null;
+            })
             .create();
 
     @Nullable
@@ -71,6 +88,7 @@ public class ExchangeFragment extends Fragment {
 
         SharedPreferences prefs = requireActivity().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         chatLogin = prefs.getString("chatLogin", "");
+        userRole = prefs.getString("role", "");
 
         if (chatLogin == null || chatLogin.isEmpty()) {
             Toast.makeText(requireContext(), "Ошибка: не найден chatLogin", Toast.LENGTH_SHORT).show();
@@ -91,14 +109,16 @@ public class ExchangeFragment extends Fragment {
 
         ImageView btnCreateExchanges = view.findViewById(R.id.btnCreateExchanges);
 
-        btnCreateExchanges.setOnClickListener(v -> showNewExchangeDialog());
+        if (userRole.equals("CHILD")){
+            btnCreateExchanges.setVisibility(View.GONE);
+        }
 
+        btnCreateExchanges.setOnClickListener(v -> showNewExchangeDialog());
 
         stomp = new StompClient(requireContext());
         stomp.setListener(new StompClient.StompListener() {
             @Override
             public void onConnected() {
-
                 if (stomp == null || !isAdded()) return;
                 stomp.subscribeToExchange(chatLogin);
             }
@@ -155,7 +175,7 @@ public class ExchangeFragment extends Fragment {
                 }
 
                 String body = response.body().string();
-                Type listType = new TypeToken<List<ExchangeOffer>>(){}.getType();
+                Type listType = new com.google.gson.reflect.TypeToken<List<ExchangeOffer>>(){}.getType();
                 List<ExchangeOffer> offers = gson.fromJson(body, listType);
 
                 if (offers != null && isAdded()) {
@@ -175,11 +195,9 @@ public class ExchangeFragment extends Fragment {
                 requireContext(),
                 chatLogin,
                 offer -> {
-                    // Добавляем локально для мгновенного отображения
                     if (adapter != null) {
                         adapter.addOrUpdate(offer);
                     }
-                    // ИСПРАВЛЕНО: Принудительно перезагружаем список для синхронизации
                     loadExchanges();
                     Toast.makeText(requireContext(), "Обмен создан", Toast.LENGTH_SHORT).show();
                 }

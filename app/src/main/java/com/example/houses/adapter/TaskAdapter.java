@@ -24,6 +24,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         void onFinish(TaskInstanceDto task, int position);  // "Завершить" (открыть диалог сохранения)
         void onConfirmByParent(TaskInstanceDto task, int position); // "Подтвердить" (parent)
         void onOpenComments(TaskInstanceDto task, int position);
+        void onEdit(TaskInstanceDto task, int position);
+
     }
 
     private static final String TAG = "TaskAdapter";
@@ -198,6 +200,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         holder.desc.setText(t.description != null ? t.description : "");
         holder.money.setText(t.money > 0 ? ("+" + t.money) : "");
 
+        int importance = t.importance; // в TaskInstanceDto есть поле importance
+        bindImportance(holder, importance);
+
         // Управление временем
         if (t.startTime != null && !t.startTime.isEmpty()) {
             holder.tvTaskTime.setVisibility(View.VISIBLE);
@@ -205,6 +210,12 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         } else {
             holder.tvTaskTime.setVisibility(View.GONE);
         }
+        // показать Edit для PARENT и ADMIN (только для шаблона/владельца или по условиям)
+        if ("PARENT".equals(currentUserRole) || "ADMIN".equals(currentUserRole)) {
+            holder.btnEdit.setVisibility(View.VISIBLE);
+            holder.btnEdit.setOnClickListener(v -> listener.onEdit(t, position));
+        }
+
 
         // 2. Логика статусов и ЦВЕТОВОЙ ПОДСВЕТКИ
         if (Boolean.TRUE.equals(t.confirmedByParent)) {
@@ -291,6 +302,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         holder.btnStart.setVisibility(View.GONE);
         holder.btnConfirm.setVisibility(View.GONE);
         holder.btnComments.setVisibility(View.GONE);
+        holder.btnEdit.setVisibility(View.GONE);
+
     }
 
     private void makeTaskGray(VH holder) {
@@ -303,6 +316,37 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         holder.btnStart.setVisibility(View.GONE);
         holder.btnConfirm.setVisibility(View.GONE);
     }
+    private void bindImportance(VH holder, int importance) {
+        // importance: 1 — низкая, 2 — средняя, 3 — высокая
+        int stripeColor;
+        int badgeTextColor = 0xFF000000; // текст на бейдже (по умолчанию чёрный)
+        int badgeBgColor;
+
+        switch (importance) {
+            case 3:
+                stripeColor = 0xFFD32F2F; // красный — высокая
+                badgeBgColor = 0xFFFFCDD2;
+                break;
+            case 2:
+                stripeColor = 0xFFFFA000; // оранжевый — средняя
+                badgeBgColor = 0xFFFFECB3;
+                break;
+            case 1:
+            default:
+                stripeColor = 0xFF2E7D32; // зелёный — низкая
+                badgeBgColor = 0xFFC8E6C9;
+                break;
+        }
+
+        // Устанавливаем цвет полосы и бейджа
+        holder.tvPriorityBadge.setBackgroundTintList(ColorStateList.valueOf(badgeBgColor));
+        holder.tvPriorityBadge.setTextColor(badgeTextColor);
+
+        // Поставим текст — цифру важности
+        holder.tvPriorityBadge.setText(String.valueOf(Math.max(1, Math.min(3, importance))));
+        holder.tvPriorityBadge.setVisibility(View.VISIBLE);
+    }
+
 
     static class VH extends RecyclerView.ViewHolder {
         com.google.android.material.card.MaterialCardView cardView;
@@ -314,6 +358,10 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
         final int defaultDescColor;
         final int defaultMoneyColor;
         final int defaultStartedColor;
+        TextView tvPriorityBadge;
+        MaterialButton btnEdit;
+
+
 
         VH(@NonNull View v) {
             super(v);
@@ -323,6 +371,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.VH> {
             money = v.findViewById(R.id.tvTaskMoney);
             tvTaskTime = v.findViewById(R.id.tvTaskTime);
             tvStartedBy = v.findViewById(R.id.tvStartedBy);
+            tvPriorityBadge = v.findViewById(R.id.tvPriorityBadge);
+            btnEdit = v.findViewById(R.id.btnEdit);
+
 
             btnTake = v.findViewById(R.id.btnTake);
             btnStart = v.findViewById(R.id.btnStart);

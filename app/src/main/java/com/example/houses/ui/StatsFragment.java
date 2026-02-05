@@ -3,6 +3,7 @@ package com.example.houses.ui;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 import android.view.LayoutInflater;
@@ -41,10 +42,10 @@ import okhttp3.Response;
 
 public class StatsFragment extends Fragment {
 
-    // Корень сервера (оттуда формируем два эндпоинта)
+    private static final String TAG = "StatsFragment";
     private static final String BASE_ROOT = "https://t7lvb7zl-8080.euw.devtunnels.ms/";
-    private static final String LEADERBOARD_PATH = "api/stats/"; // + {chatLogin} + /leaderboard?sortBy=money
-    private static final String CHAT_USERS_PATH = "api/chats_data/get_chats_users/"; // + {chatLogin}
+    private static final String LEADERBOARD_PATH = "api/stats/";
+    private static final String CHAT_USERS_PATH = "api/chats_data/get_chats_users/";
 
     private RecyclerView recyclerStats;
     private StatsAdapter adapter;
@@ -53,79 +54,159 @@ public class StatsFragment extends Fragment {
     private FrameLayout fragmentStatContainer;
 
     private Gson gson;
-    private String chatLogin;
-    private String userLogin;
-    private String userRole;
+    private String chatLogin = "";
+    private String userLogin = "";
+    private String userRole = "";
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-
-        SharedPreferences prefs = requireActivity()
-                .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
-
-        // Записываем в поля (НЕ создаём локальные переменные!)
-        this.userRole = prefs.getString("role", "");
-        this.userLogin = prefs.getString("login", "");
-        this.chatLogin = prefs.getString("chatLogin", "");
-
-        // Всегда инфлейтим layout — но если роль CHILD, мы в onViewCreated заменим фрагмент на график и вернёмся раньше
         return inflater.inflate(R.layout.fragment_stats, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        // Инициализация views
         recyclerStats = view.findViewById(R.id.recyclerStats);
-        fragmentStatContainer= view.findViewById(R.id.fragmentStatContainer);
+        fragmentStatContainer = view.findViewById(R.id.fragmentStatContainer);
 
-        if ("CHILD".equalsIgnoreCase(userRole)) {
-            StatsChartFragment chartFragment = new StatsChartFragment();
-            Bundle args = new Bundle();
-            args.putString("userLogin", userLogin);
-            args.putString("chatLogin", chatLogin);
-            chartFragment.setArguments(args);
-
-            getChildFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.fragmentStatContainer, chartFragment)
-                    .commitNow();
-
-            recyclerStats.setVisibility(View.GONE); // прячем рейтинг
-            return;
-        }
-        fragmentStatContainer.setVisibility(View.GONE);
-        recyclerStats.setVisibility(View.VISIBLE);
-
-
-
-        // === Дальше — инициализация для не-CHILD пользователей ===
-
-        recyclerStats.setLayoutManager(new LinearLayoutManager(requireContext()));
-
-        adapter = new StatsAdapter(userLogin, this::openStatsChart);
-        recyclerStats.setAdapter(adapter);
-
+        // Инициализируем http/gson для потенциальных вызовов
         httpClient = new OkHttpClient();
         gson = new Gson();
 
-        loadChatUsersAndThenLeaderboard();
+        // Загружаем данные пользователя — пробуем несколько ключей на случай различий
+        SharedPreferences prefs = requireActivity().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
+        userRole = firstNonEmpty(
+                prefs.getString("role", null),
+                prefs.getString("userRole", null),
+                prefs.getString("ROLE", null)
+        );
+        userLogin = firstNonEmpty(
+                prefs.getString("login", null),
+                prefs.getString("user_login", null)
+        );
+        chatLogin = firstNonEmpty(
+                prefs.getString("chatLogin", null),
+                prefs.getString("chat_login", null)
+        );
 
+        if (userRole == null) userRole = "";
+        if (userLogin == null) userLogin = "";
+        if (chatLogin == null) chatLogin = "";
+
+        Log.d(TAG, "Role: [" + userRole + "], User: [" + userLogin + "], Chat: [" + chatLogin + "]");
+
+        // Если CHILD — показываем график и используем login из prefs (надёжно)
+        if (userRole.toUpperCase().contains("CHILD")) {
+            showStatsChart(userLogin);
+            return;
+        }
+
+        // Для PARENT/ADMIN — показываем список
+        setupLeaderboard();
+    }
+
+    private String firstNonEmpty(String... values) {
+        for (String s : values) {
+            if (s != null && !s.trim().isEmpty()) return s.trim();
+        }
+        return "";
+    }
+
+    private void setupLeaderboard() {
+        // Показываем список, скрываем контейнер с графиком
+        if (fragmentStatContainer != null) fragmentStatContainer.setVisibility(View.GONE);
+        if (recyclerStats != null) recyclerStats.setVisibility(View.VISIBLE);
+
+        recyclerStats.setLayoutManager(new LinearLayoutManager(requireContext()));
+        adapter = new StatsAdapter(userLogin, this::openStatsChart);
+        recyclerStats.setAdapter(adapter);
+
+        loadData();
+
+        // WebSocket для обновлений (только для списка)
+        setupWebSocket();
+    }
+
+    private void setupWebSocket() {
         if (stompClient == null) {
             stompClient = new StompClient(requireContext());
         }
 
         stompClient.setListener(new StompClient.StompListener() {
-            @Override public void onConnected() {}
-            @Override public void onTaskInstance(TaskInstanceDto instanceDto) { loadChatUsersAndThenLeaderboard(); }
-            @Override public void onExchangeUpdate(ExchangeOffer offer) {}
-            @Override public void onChatMessage(ChatMessage m) {}
-            @Override public void onError(String reason) {}
+            @Override
+            public void onConnected() {
+                Log.d(TAG, "WebSocket connected");
+            }
+
+            @Override
+            public void onTaskInstance(TaskInstanceDto instanceDto) {
+                Log.d(TAG, "Task update, reloading...");
+                reloadData();
+            }
+
+            @Override
+            public void onExchangeUpdate(ExchangeOffer offer) {
+                Log.d(TAG, "Exchange update, reloading...");
+                reloadData();
+            }
+
+            @Override
+            public void onChatMessage(ChatMessage m) {}
+
+            @Override
+            public void onError(String reason) {
+                Log.e(TAG, "WebSocket error: " + reason);
+            }
         });
 
         stompClient.connect();
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Обновляем при возврате на фрагмент (если это не CHILD)
+        if (!userRole.toUpperCase().contains("CHILD") && httpClient != null) {
+            loadData();
+        }
+    }
+
+    private void reloadData() {
+        if (!isAdded()) return;
+        requireActivity().runOnUiThread(this::loadData);
+    }
+
+    private void loadData() {
+        if (chatLogin == null || chatLogin.isEmpty()) {
+            Log.e(TAG, "chatLogin is empty");
+            return;
+        }
+        loadChatUsersAndThenLeaderboard();
+    }
+
+    private void showStatsChart(String login) {
+        // Включаем контейнер и скрываем список
+        if (fragmentStatContainer != null) fragmentStatContainer.setVisibility(View.VISIBLE);
+        if (recyclerStats != null) recyclerStats.setVisibility(View.GONE);
+
+        // Создаём фрагмент графика и передаём аргументы
+        StatsChartFragment chartFragment = new StatsChartFragment();
+        Bundle args = new Bundle();
+        args.putString("userLogin", login);
+        args.putString("chatLogin", chatLogin);
+        chartFragment.setArguments(args);
+
+        // Используем childFragmentManager — график вложен в этот фрагмент
+        if (isAdded()) {
+            getChildFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragmentStatContainer, chartFragment)
+                    .commit(); // commit() вместо commitNow()
+        }
+    }
 
     private void loadChatUsersAndThenLeaderboard() {
         String url = BASE_ROOT + CHAT_USERS_PATH + chatLogin;
@@ -161,6 +242,7 @@ public class StatsFragment extends Fragment {
                 try {
                     chatUsers = gson.fromJson(body, chatDataListType);
                 } catch (Exception ex) {
+                    Log.e(TAG, "Parse chat users error", ex);
                     chatUsers = new ArrayList<>();
                 }
 
@@ -176,8 +258,9 @@ public class StatsFragment extends Fragment {
 
                 if (childLogins.isEmpty()) {
                     // Нет детей — очищаем адаптер и уведомляем пользователя
+                    if (!isAdded()) return;
                     requireActivity().runOnUiThread(() -> {
-                        adapter.setData(new ArrayList<>());
+                        if (adapter != null) adapter.setData(new ArrayList<>());
                         Toast.makeText(requireContext(), "В этом чате нет пользователей с ролью CHILD", Toast.LENGTH_SHORT).show();
                     });
                     return;
@@ -189,9 +272,27 @@ public class StatsFragment extends Fragment {
         });
     }
 
+    private void openStatsChart(String selectedUserLogin) {
+        // Открываем график пользователя в активити (замена фрагмента)
+        StatsChartFragment fragment = new StatsChartFragment();
+        Bundle args = new Bundle();
+        args.putString("userLogin", selectedUserLogin);
+        args.putString("chatLogin", chatLogin);
+        fragment.setArguments(args);
+
+        // Заменяем главный контейнер активити (убедись, что id exists в activity layout)
+        // Если у тебя другой id контейнера — поменяй R.id.bottomNavigation на correct id
+        requireActivity()
+                .getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.bottomNavigation, fragment)
+                .addToBackStack(null)
+                .commit();
+    }
 
     private void loadLeaderboardFilteredBy(Set<String> childLogins) {
         String url = BASE_ROOT + LEADERBOARD_PATH + chatLogin + "/leaderboard?sortBy=money";
+        Log.d(TAG, "Loading leaderboard: " + url);
 
         Request request = new Request.Builder()
                 .url(url)
@@ -201,10 +302,8 @@ public class StatsFragment extends Fragment {
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                if (!isAdded()) return;
-                requireActivity().runOnUiThread(() ->
-                        Toast.makeText(requireContext(), "Ошибка соединения (лидерборд)", Toast.LENGTH_SHORT).show()
-                );
+                Log.e(TAG, "Leaderboard load failed", e);
+                // Не показываем Toast при фоновом обновлении
             }
 
             @Override
@@ -212,9 +311,7 @@ public class StatsFragment extends Fragment {
                 if (!isAdded()) return;
 
                 if (!response.isSuccessful()) {
-                    requireActivity().runOnUiThread(() ->
-                            Toast.makeText(requireContext(), "Ошибка сервера (лидерборд): " + response.code(), Toast.LENGTH_SHORT).show()
-                    );
+                    Log.e(TAG, "Leaderboard error: " + response.code());
                     return;
                 }
 
@@ -224,10 +321,11 @@ public class StatsFragment extends Fragment {
                 try {
                     statsList = gson.fromJson(body, listType);
                 } catch (Exception ex) {
+                    Log.e(TAG, "Parse error", ex);
                     statsList = new ArrayList<>();
                 }
 
-                // Фильтруем — оставляем только те userLogin, которые есть в childLogins
+                // Фильтруем
                 List<UserStats> filtered = new ArrayList<>();
                 for (UserStats s : statsList) {
                     if (s != null && s.getUserLogin() != null && childLogins.contains(s.getUserLogin())) {
@@ -236,24 +334,23 @@ public class StatsFragment extends Fragment {
                 }
 
                 if (!isAdded()) return;
-                requireActivity().runOnUiThread(() -> adapter.setData(filtered));
+
+                requireActivity().runOnUiThread(() -> {
+                    if (adapter != null) {
+                        adapter.setData(filtered);
+                        Log.d(TAG, "Updated adapter with " + filtered.size() + " items");
+                    }
+                });
             }
         });
     }
-    private void openStatsChart(String selectedUserLogin) {
-        StatsChartFragment fragment = new StatsChartFragment();
 
-        Bundle args = new Bundle();
-        args.putString("userLogin", selectedUserLogin);
-        args.putString("chatLogin", chatLogin);
-        fragment.setArguments(args);
-
-        requireActivity()
-                .getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.bottomNavigation, fragment)
-                .addToBackStack(null)
-                .commit();
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (stompClient != null) {
+            stompClient.disconnect();
+            stompClient = null;
+        }
     }
-
 }

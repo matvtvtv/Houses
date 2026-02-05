@@ -120,9 +120,19 @@ public class CommentPhotoDialog extends Dialog {
 
         for (String base64 : photoBase64List) {
             ImageView imageView = new ImageView(getContext());
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(300, 300);
+            // Получаем ширину экрана
+            int screenWidth = getContext().getResources().getDisplayMetrics().widthPixels;
+            int screenHeight = getContext().getResources().getDisplayMetrics().heightPixels;
+
+            int targetWidth = (int) (screenWidth * 0.4); // 30% от экрана
+            int targetHeight = (int) (screenHeight * 0.4); // 30% от экрана
+
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(targetWidth, targetHeight);
             params.setMargins(8, 8, 8, 8);
             imageView.setLayoutParams(params);
+
+
+
             imageView.setImageBitmap(
                     ImageUtils.base64ToBitmap(base64)
             );

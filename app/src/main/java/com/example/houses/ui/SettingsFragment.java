@@ -68,6 +68,7 @@ public class SettingsFragment extends Fragment {
 
         button3.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), RegistrationActivity.class)));
+
     }
 
     private void openGallery() {

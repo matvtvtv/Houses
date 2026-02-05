@@ -1,6 +1,9 @@
 package com.example.houses.ui;
 
+import static androidx.core.content.ContentProviderCompat.requireContext;
+
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
 import android.app.TimePickerDialog;
@@ -30,6 +33,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +72,9 @@ public class NewTaskDialog extends Dialog {
 
     private String startTime = null;
     private String endTime = null;
+    private Task editingTask = null;
+    private boolean editMode = false;
+
 
     public interface NewTaskListener {
         void onTaskCreated(Task task);
@@ -92,31 +99,17 @@ public class NewTaskDialog extends Dialog {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.dialog_new_task);
 
-        editTitle = findViewById(R.id.editTaskTitle);
-        editDesc = findViewById(R.id.editTaskDesc);
-        editMoney = findViewById(R.id.editTaskMoney);
-        scrollView = findViewById(R.id.scrollView);
-
-        tvStartDate = findViewById(R.id.tvStartDate);
-        btnPickDate = findViewById(R.id.btnPickDate);
-
-        chipMon = findViewById(R.id.chipMon);
-        chipTue = findViewById(R.id.chipTue);
-        chipWed = findViewById(R.id.chipWed);
-        chipThu = findViewById(R.id.chipThu);
-        chipFri = findViewById(R.id.chipFri);
-        chipSat = findViewById(R.id.chipSat);
-        chipSun = findViewById(R.id.chipSun);
-
-        btnCreate = findViewById(R.id.btnCreateTask);
-        btnCancel = findViewById(R.id.btnCancelTask);
-
-        spinnerTargetUser = findViewById(R.id.spinnerTargetUser);
+        getAllId();
 
 
         preferences = getContext().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
         userLogin = preferences.getString("login", "1");
         userRole = preferences.getString("role", "CHILD");
+
+        btnCreate.setEnabled(true);
+
+
+
 
         if ("CHILD".equals(userRole)) {
             editMoney.setVisibility(View.GONE);
@@ -149,11 +142,52 @@ public class NewTaskDialog extends Dialog {
             if (validateAndCreate()) dismiss();
         });
 
-        tvToggleExtra = findViewById(R.id.tvToggleExtra);
-        cardExtra = findViewById(R.id.cardExtra);
 
-        btnStartTime = findViewById(R.id.btnStartTime);
-        btnEndTime = findViewById(R.id.btnEndTime);
+
+
+        if (editMode && editingTask != null) {
+            // Префилл полей
+            editTitle.setText(editingTask.getTitle());
+            editDesc.setText(editingTask.getDescription());
+            if (editingTask.getMoney() != 0) editMoney.setText(String.valueOf(editingTask.getMoney()));
+            if (editingTask.getStartTime() != null) {
+                startTime = editingTask.getStartTime();
+                btnStartTime.setText("Начало: " + startTime);
+            }
+            if (editingTask.getEndTime() != null) {
+                endTime = editingTask.getEndTime();
+                btnEndTime.setText("Конец: " + endTime);
+            }
+            if (editingTask.getPartDay() != null) {
+                RadioGroup rgDay = findViewById(R.id.rgPartDay);
+                if ("MORNING".equals(editingTask.getPartDay())) rgDay.check(R.id.rbMorning);
+                else if ("DAY".equals(editingTask.getPartDay())) rgDay.check(R.id.rbDay);
+                else if ("EVENING".equals(editingTask.getPartDay())) rgDay.check(R.id.rbEvening);
+            }
+            if (editingTask.getDays() != null) {
+                // выставить chip'ы по именам (MONDAY..)
+                // пример: if (Arrays.asList(editingTask.getDays()).contains("MONDAY")) chipMon.setChecked(true);
+                List<String> ds = editingTask.getDays() != null ? Arrays.asList(editingTask.getDays()) : new ArrayList<>();
+                chipMon.setChecked(ds.contains("MONDAY"));
+                chipTue.setChecked(ds.contains("TUESDAY"));
+                chipWed.setChecked(ds.contains("WEDNESDAY"));
+                chipThu.setChecked(ds.contains("THURSDAY"));
+                chipFri.setChecked(ds.contains("FRIDAY"));
+                chipSat.setChecked(ds.contains("SATURDAY"));
+                chipSun.setChecked(ds.contains("SUNDAY"));
+            }
+            // importance (если есть RadioGroup rgImportance)
+            RadioGroup rgImp = findViewById(R.id.rgImportance);
+            if (rgImp != null) {
+                int imp = editingTask.getImportance();
+                if (imp == 1) rgImp.check(R.id.rbImp1);
+                else if (imp == 2) rgImp.check(R.id.rbImp2);
+                else if (imp == 3) rgImp.check(R.id.rbImp3);
+            }
+
+            btnCreate.setText("Сохранить");
+        }
+
 
         tvToggleExtra.setOnClickListener(v -> {
             setupUserSpinner();
@@ -216,6 +250,8 @@ public class NewTaskDialog extends Dialog {
             return false;
         }
 
+
+
         int money = 0;
         if (!"CHILD".equals(userRole)) {
             String m = editMoney.getText().toString().trim();
@@ -232,6 +268,11 @@ public class NewTaskDialog extends Dialog {
         }
 
         Task task = new Task();
+
+        if (editMode && editingTask != null) {
+            task.setId(editingTask.getId()); // Сохраняем ID для обновления
+        }
+
         task.setChatLogin(chatLogin);
         task.setTitle(title);
         task.setDescription(editDesc.getText().toString().trim());
@@ -267,6 +308,16 @@ public class NewTaskDialog extends Dialog {
         if (selectedDate != null) {
             task.setStartDate(selectedDate.format(ISO));
         }
+        RadioGroup rgImp = findViewById(R.id.rgImportance);
+        int imp = 1;
+        if (rgImp != null) {
+            int checked = rgImp.getCheckedRadioButtonId();
+            if (checked == R.id.rbImp1) imp = 1;
+            else if (checked == R.id.rbImp2) imp = 2;
+            else if (checked == R.id.rbImp3) imp = 3;
+        }
+        task.setImportance(imp);
+
 
         listener.onTaskCreated(task);
         return true;
@@ -290,5 +341,48 @@ public class NewTaskDialog extends Dialog {
             );
             getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
+
     }
+    public NewTaskDialog(@NonNull Context ctx, String chatLogin, Task existingTask, NewTaskListener listener) {
+        super(ctx);
+        this.chatLogin = chatLogin;
+        this.listener = listener;
+        this.editingTask = existingTask;
+        this.editMode = true;
+    }
+
+    public void getAllId(){
+        editTitle = findViewById(R.id.editTaskTitle);
+        editDesc = findViewById(R.id.editTaskDesc);
+        editMoney = findViewById(R.id.editTaskMoney);
+        scrollView = findViewById(R.id.scrollView);
+
+        tvStartDate = findViewById(R.id.tvStartDate);
+        btnPickDate = findViewById(R.id.btnPickDate);
+
+        chipMon = findViewById(R.id.chipMon);
+        chipTue = findViewById(R.id.chipTue);
+        chipWed = findViewById(R.id.chipWed);
+        chipThu = findViewById(R.id.chipThu);
+        chipFri = findViewById(R.id.chipFri);
+        chipSat = findViewById(R.id.chipSat);
+        chipSun = findViewById(R.id.chipSun);
+
+        btnCreate = findViewById(R.id.btnCreateTask);
+        btnCancel = findViewById(R.id.btnCancelTask);
+
+        spinnerTargetUser = findViewById(R.id.spinnerTargetUser);
+        tvToggleExtra = findViewById(R.id.tvToggleExtra);
+        cardExtra = findViewById(R.id.cardExtra);
+
+        btnStartTime = findViewById(R.id.btnStartTime);
+        btnEndTime = findViewById(R.id.btnEndTime);
+    }
+
+
+
+
+
+
+
 }

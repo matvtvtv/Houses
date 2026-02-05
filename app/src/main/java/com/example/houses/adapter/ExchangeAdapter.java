@@ -8,8 +8,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.houses.R;
 import com.example.houses.model.ExchangeOffer;
 
+import java.time.Month;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class ExchangeAdapter extends RecyclerView.Adapter<ExchangeAdapter.VH> {
 
@@ -27,11 +30,19 @@ public class ExchangeAdapter extends RecyclerView.Adapter<ExchangeAdapter.VH> {
     public void onBindViewHolder(@NonNull VH h, int i) {
         ExchangeOffer o = data.get(i);
 
-        // Используем ownerLogin и cost из твоей модели
-        h.title.setText(o.getTitle()); // или "От: " + o.getOwnerLogin()
-        h.cost.setText(o.getCost() + " монет");
+        h.title.setText(o.getTitle() != null ? o.getTitle() : "Без названия");
 
-        // active вместо status
+        // ИСПРАВЛЕНО: проверка на null для month
+        Month month = o.getMonth();
+        if (month != null) {
+            h.month.setText(month.getDisplayName(TextStyle.FULL_STANDALONE,
+                    new Locale("ru", "RU")));
+        } else {
+            h.month.setText("Месяц не указан");
+        }
+
+        h.desc.setText(o.getDescription() != null ? o.getDescription() : "");
+
         if (o.isActive()) {
             h.itemView.setAlpha(1.0f);
         } else {
@@ -59,12 +70,13 @@ public class ExchangeAdapter extends RecyclerView.Adapter<ExchangeAdapter.VH> {
     }
 
     static class VH extends RecyclerView.ViewHolder {
-        TextView title, cost;
+        TextView title, month, desc;
 
         VH(View v) {
             super(v);
             title = v.findViewById(R.id.tvTitle);
-            cost = v.findViewById(R.id.tvCost);
+            month = v.findViewById(R.id.tvMonth);
+            desc = v.findViewById(R.id.tvDescription);
         }
     }
 }

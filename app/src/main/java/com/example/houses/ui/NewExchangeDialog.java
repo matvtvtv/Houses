@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -22,6 +24,10 @@ import com.google.gson.JsonSerializer;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.Month;
+import java.util.Arrays;
+import java.util.Locale;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -40,7 +46,8 @@ public class NewExchangeDialog extends Dialog {
     private final String chatLogin;
     private final Listener listener;
 
-    private EditText etTitle, etCost, etDescription;
+    private EditText etTitle, etDescription;
+    private AutoCompleteTextView spinnerMonth;
     private Button btnCreate, btnCancel;
 
     private final OkHttpClient http = new OkHttpClient();
@@ -50,6 +57,31 @@ public class NewExchangeDialog extends Dialog {
                     Instant.parse(json.getAsString()))
             .registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (src, typeOfSrc, context) ->
                     new JsonPrimitive(src.toString()))
+            // ИСПРАВЛЕНО: поддержка и числа и строки для Month
+            .registerTypeAdapter(Month.class, (JsonSerializer<Month>) (src, type, context) ->
+                    new JsonPrimitive(src.getValue())) // Отправляем как число
+            .registerTypeAdapter(Month.class, (JsonDeserializer<Month>) (json, type, context) -> {
+                if (json.isJsonPrimitive()) {
+                    JsonPrimitive primitive = json.getAsJsonPrimitive();
+                    if (primitive.isNumber()) {
+                        // Приходит число (1-12)
+                        int monthValue = primitive.getAsInt();
+                        return Month.of(monthValue);
+                    } else if (primitive.isString()) {
+                        // Приходит строка ("JANUARY")
+                        String str = primitive.getAsString();
+                        try {
+                            // Пробуем как число
+                            int val = Integer.parseInt(str);
+                            return Month.of(val);
+                        } catch (NumberFormatException e) {
+                            // Пробуем как имя enum
+                            return Month.valueOf(str);
+                        }
+                    }
+                }
+                return null;
+            })
             .create();
 
     public NewExchangeDialog(
@@ -68,31 +100,58 @@ public class NewExchangeDialog extends Dialog {
         setContentView(R.layout.dialog_new_exchange);
 
         etTitle = findViewById(R.id.editExchangeTitle);
-        etCost = findViewById(R.id.editExchangeCost);
+        spinnerMonth = findViewById(R.id.spinnerMonth);
         etDescription = findViewById(R.id.editExchangeDesc);
 
         btnCreate = findViewById(R.id.btnCreateExchange);
         btnCancel = findViewById(R.id.btnCancelExchange);
 
+        setupMonthSpinner();
+
         btnCreate.setOnClickListener(v -> createExchange());
         btnCancel.setOnClickListener(v -> dismiss());
+    }
+
+    private void setupMonthSpinner() {
+        String[] months = Arrays.stream(Month.values())
+                .map(m -> m.getDisplayName(java.time.format.TextStyle.FULL_STANDALONE,
+                        new Locale("ru", "RU")))
+                .toArray(String[]::new);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                getContext(),
+                R.layout.list_item_month,
+                months
+        );
+
+        spinnerMonth.setAdapter(adapter);
+        Month currentMonth = LocalDate.now().getMonth();
+        spinnerMonth.setText(months[currentMonth.getValue() - 1], false);
+    }
+
+    private Month getSelectedMonth() {
+        String selected = spinnerMonth.getText().toString();
+        Month[] months = Month.values();
+        String[] monthNames = Arrays.stream(months)
+                .map(m -> m.getDisplayName(java.time.format.TextStyle.FULL_STANDALONE,
+                        new Locale("ru", "RU")))
+                .toArray(String[]::new);
+
+        for (int i = 0; i < monthNames.length; i++) {
+            if (monthNames[i].equals(selected)) {
+                return months[i];
+            }
+        }
+        return LocalDate.now().getMonth();
     }
 
     private void createExchange() {
         String title = etTitle.getText().toString().trim();
         String desc = etDescription.getText().toString().trim();
-        String costStr = etCost.getText().toString().trim();
+        Month month = getSelectedMonth();
 
-        if (title.isEmpty() || costStr.isEmpty()) {
-            toast("Заполните название и стоимость");
-            return;
-        }
-
-        int cost;
-        try {
-            cost = Integer.parseInt(costStr);
-        } catch (NumberFormatException e) {
-            toast("Стоимость должна быть числом");
+        if (title.isEmpty()) {
+            toast("Заполните название");
             return;
         }
 
@@ -104,7 +163,7 @@ public class NewExchangeDialog extends Dialog {
         offer.setChatLogin(chatLogin);
         offer.setTitle(title);
         offer.setDescription(desc);
-        offer.setCost(cost);
+        offer.setMonth(month);
         offer.setOwnerLogin(ownerLogin);
         offer.setActive(true);
 
@@ -113,7 +172,6 @@ public class NewExchangeDialog extends Dialog {
                 MediaType.parse("application/json")
         );
 
-        // ИСПРАВЛЕНО: убраны пробелы в URL
         Request request = new Request.Builder()
                 .url("https://t7lvb7zl-8080.euw.devtunnels.ms/api/exchange/create")
                 .post(body)
@@ -152,6 +210,7 @@ public class NewExchangeDialog extends Dialog {
     private void toast(String msg) {
         Toast.makeText(getContext(), msg, Toast.LENGTH_SHORT).show();
     }
+
     @Override
     protected void onStart() {
         super.onStart();

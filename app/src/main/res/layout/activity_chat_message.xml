@@ -46,7 +46,7 @@
                 android:layout_height="wrap_content"
                 android:padding="10dp"
                 android:hint="Введите сообщение"
-                android:background="@android:color/transparent"
+                android:background="@color/text_gray"
                 android:inputType="text" />
         </androidx.cardview.widget.CardView>
         <androidx.cardview.widget.CardView

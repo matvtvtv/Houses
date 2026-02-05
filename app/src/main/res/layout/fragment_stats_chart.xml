@@ -21,9 +21,11 @@
             android:textColor="@color/white"
             android:fontFamily="sans-serif-black"
             android:layout_marginStart="4dp"
-            android:layout_marginBottom="4dp"/>
+            android:layout_marginBottom="16dp"/>
 
+        <!-- Карточки статистики за 2 месяца -->
 
+        <!-- График -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardContainer"
             android:layout_width="match_parent"
@@ -59,7 +61,7 @@
                     <com.google.android.material.chip.Chip
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="2 недели"
+                        android:text="за последние 2 недели"
                         android:textSize="12sp"
                         app:chipBackgroundColor="#F5F5F5"
                         app:chipStrokeWidth="0dp"
@@ -125,10 +127,7 @@
                             android:layout_width="16dp"
                             android:layout_height="2dp"
                             android:background="#FFB74D"
-                            android:layout_marginEnd="8dp"
-                            android:layerType="software"
-                            android:backgroundTintMode="src_in"
-                            android:backgroundTint="#FFB74D"/>
+                            android:layout_marginEnd="8dp"/>
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -142,40 +141,108 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Дополнительная карточка с инсайтами -->
-        <com.google.android.material.card.MaterialCardView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp"
-            app:cardBackgroundColor="#E8F5E9"
-            android:layout_marginTop="8dp">
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal">
 
-<!--            <LinearLayout-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:orientation="vertical"-->
-<!--                android:padding="20dp">-->
+            <!-- Текущий месяц -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardCurrentMonth"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:visibility="gone"
+                app:cardBackgroundColor="#8E54E9"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="4dp">
 
-<!--                <TextView-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:text="💡 Инсайт"-->
-<!--                    android:textColor="#2E7D32"-->
-<!--                    android:textSize="14sp"-->
-<!--                    android:fontFamily="sans-serif-bold"-->
-<!--                    android:layout_marginBottom="4dp"/>-->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-<!--                <TextView-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:text="Самый продуктивный день обычно приходится на среду. Попробуй запланировать сложные задачи на эту дату."-->
-<!--                    android:textColor="#1B5E20"-->
-<!--                    android:textSize="14sp"-->
-<!--                    android:lineSpacingMultiplier="1.2"/>-->
-<!--            </LinearLayout>-->
-        </com.google.android.material.card.MaterialCardView>
+                    <TextView
+                        android:id="@+id/tvCurrentMonthLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:alpha="0.8"
+                        android:text="Февраль"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/tvCurrentMonthMoney"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="0 💰"
+                        android:textColor="#FFFFFF"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvCurrentMonthTasks"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="0 ✅"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Прошлый месяц -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardLastMonth"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:visibility="gone"
+                app:cardBackgroundColor="#4776E6"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tvLastMonthLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:alpha="0.8"
+                        android:text="Январь"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/tvLastMonthMoney"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="0 💰"
+                        android:textColor="#FFFFFF"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvLastMonthTasks"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="0 ✅"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

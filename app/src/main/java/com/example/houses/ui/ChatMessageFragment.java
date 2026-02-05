@@ -119,14 +119,19 @@ public class ChatMessageFragment extends Fragment {
             @Override
             public void onChatMessage(ChatMessage message) {
                 if (!isAdded()) return;
-                requireActivity().runOnUiThread(() -> {
-                    if (adapter != null) {
-                        adapter.addMessage(message);
-                        RecyclerView rv = getView().findViewById(R.id.recyclerMessages);
-                        if (rv != null) rv.smoothScrollToPosition(adapter.getItemCount() - 1);
+                if (getActivity() == null) return;
+
+                getActivity().runOnUiThread(() -> {
+                    if (adapter == null || getView() == null) return;
+
+                    adapter.addMessage(message);
+                    RecyclerView rv = getView().findViewById(R.id.recyclerMessages);
+                    if (rv != null) {
+                        rv.smoothScrollToPosition(adapter.getItemCount() - 1);
                     }
                 });
             }
+
 
             @Override
             public void onTaskInstance(TaskInstanceDto taskInstance) {
@@ -240,8 +245,17 @@ public class ChatMessageFragment extends Fragment {
 
                 if (list == null) return;
 
-                requireActivity().runOnUiThread(() -> adapter.setAll(list));
+                if (!isAdded()) return;
+                if (getActivity() == null) return;
+                if (adapter == null) return;
+
+                getActivity().runOnUiThread(() -> {
+                    if (adapter != null) {
+                        adapter.setAll(list);
+                    }
+                });
             }
+
         });
     }
 
