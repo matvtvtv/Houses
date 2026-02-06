@@ -4,8 +4,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -29,6 +31,7 @@ public class LoginActivity extends AppCompatActivity {
 
     EditText etLogin, etPassword;
     Button btnRegister, btnEnterance;
+    ProgressBar progressBar;
 
     private final OkHttpClient client = new OkHttpClient();
     private final Gson gson = new Gson();
@@ -49,6 +52,7 @@ public class LoginActivity extends AppCompatActivity {
         etPassword = findViewById(R.id.etPassword);
         btnRegister = findViewById(R.id.btnRegister);
         btnEnterance = findViewById(R.id.btnEnterance);
+        progressBar = findViewById(R.id.progressBar);
 
         btnEnterance.setOnClickListener(v -> login());
 
@@ -58,14 +62,26 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
+    private void showLoading() {
+        progressBar.setVisibility(View.VISIBLE);
+        btnEnterance.setEnabled(false);
+    }
+
+    private void hideLoading() {
+        progressBar.setVisibility(View.GONE);
+        btnEnterance.setEnabled(true);
+    }
+
     private void login() {
         String login = etLogin.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
 
         if (login.isEmpty() || password.isEmpty()) {
-            Toast.makeText(this, "Fill all fields", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Заполните все поля", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        showLoading();
 
         LoginRequest dto = new LoginRequest(login, password);
         String json = gson.toJson(dto);
@@ -84,19 +100,23 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call call, IOException e) {
-                runOnUiThread(() ->
-                        Toast.makeText(LoginActivity.this,
-                                "Server error: " + e.getMessage(),
-                                Toast.LENGTH_LONG).show());
+                runOnUiThread(() -> {
+                    hideLoading();
+                    Toast.makeText(LoginActivity.this,
+                            "Ошибка сервера: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                });
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException {
+            public void onResponse(Call call, Response response) {
                 if (!response.isSuccessful()) {
-                    runOnUiThread(() ->
-                            Toast.makeText(LoginActivity.this,
-                                    "Invalid login or password",
-                                    Toast.LENGTH_SHORT).show());
+                    runOnUiThread(() -> {
+                        hideLoading();
+                        Toast.makeText(LoginActivity.this,
+                                "Неверный логин или пароль",
+                                Toast.LENGTH_SHORT).show();
+                    });
                     return;
                 }
 
@@ -116,19 +136,32 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call call, IOException e) {
+                runOnUiThread(() -> {
+                    hideLoading();
+                    Toast.makeText(LoginActivity.this,
+                            "Не удалось загрузить данные пользователя",
+                            Toast.LENGTH_SHORT).show();
+                });
                 Log.e("LoginActivity", "Role load failed", e);
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                if (!response.isSuccessful() || response.body() == null) return;
+                if (!response.isSuccessful() || response.body() == null) {
+                    runOnUiThread(() -> {
+                        hideLoading();
+                        Toast.makeText(LoginActivity.this,
+                                "Ошибка получения роли пользователя",
+                                Toast.LENGTH_SHORT).show();
+                    });
+                    return;
+                }
 
                 String body = response.body().string();
                 UserModel user = gson.fromJson(body, UserModel.class);
 
                 String role = user.getRole();
 
-                // Сохраняем в SharedPreferences
                 SharedPreferences prefs =
                         getSharedPreferences("AppPrefs", MODE_PRIVATE);
 
@@ -138,8 +171,9 @@ public class LoginActivity extends AppCompatActivity {
                         .apply();
 
                 runOnUiThread(() -> {
+                    hideLoading();
                     Toast.makeText(LoginActivity.this,
-                            "Entrance successful (" + role + ")",
+                            "Вход выполнен успешно (" + role + ")",
                             Toast.LENGTH_SHORT).show();
 
                     startActivity(new Intent(

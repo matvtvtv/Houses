@@ -43,7 +43,7 @@ public class TaskForegroundService extends Service {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Task Service")
                 .setContentText("Service running...")
-                .setSmallIcon(R.drawable.bg_day_item)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .build();
 
         startForeground(NOTIF_ID, notification);
@@ -72,7 +72,7 @@ public class TaskForegroundService extends Service {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(content)
-                .setSmallIcon(R.drawable.bg_day_item)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setAutoCancel(true)
                 .build();
 

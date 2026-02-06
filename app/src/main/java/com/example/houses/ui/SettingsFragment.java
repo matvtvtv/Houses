@@ -1,8 +1,11 @@
 package com.example.houses.ui;
 
 
+import android.app.AlertDialog;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -12,31 +15,43 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.Toast;
 
 import de.hdodenhof.circleimageview.CircleImageView;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
 import com.example.houses.DB.DatabaseHelper;
 import com.example.houses.R;
 import com.example.houses.RegistrationActivity;
+import com.example.houses.model.ChatData;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-
-
-
+import java.lang.reflect.Type;
+import java.util.List;
 
 
 public class SettingsFragment extends Fragment {
 
     private static final int AVATAR_SIZE = 256;
+    private View cardInternet, cardReport;
+    private Button btnDeleteAccount;
+    private SwitchCompat switchWifiOnly;
 
     private CircleImageView imgAvatar;
-    private Button btnChoose, button2, button3;
+    private Button btnChoose, button2, button3,btnDelDan;
+    String chatLogin;
 
     // Современный API для выбора изображений
     private final ActivityResultLauncher<String> pickImageLauncher = registerForActivityResult(
@@ -60,16 +75,209 @@ public class SettingsFragment extends Fragment {
         btnChoose = view.findViewById(R.id.btnChooseAvatar);
 
         button3 = view.findViewById(R.id.btnLogout);
+        btnDelDan = view.findViewById(R.id.btnDelDan);
 
         loadAvatar();
 
         btnChoose.setOnClickListener(v -> openGallery());
+        switchWifiOnly = view.findViewById(R.id.switchInternet);
+        loadWifiSetting();
+
+        SharedPreferences preferences = requireActivity()
+                .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
+
+        chatLogin = preferences.getString("chatLogin", "1");
+        String role = preferences.getString("role", "");
+
+        button3.setOnClickListener(v -> startActivity(new Intent(requireContext(), RegistrationActivity.class)));
+        cardInternet = view.findViewById(R.id.cardInternet);
+        cardReport = view.findViewById(R.id.cardReport);
+        btnDeleteAccount = view.findViewById(R.id.btnDeleteAccount);
+
+        cardInternet.setOnClickListener(v -> {
+            Intent intent = new Intent(android.provider.Settings.ACTION_WIFI_SETTINGS);
+            startActivity(intent);
+        });
+        cardReport.setOnClickListener(v -> {
+            Intent emailIntent = new Intent(Intent.ACTION_SENDTO);
+            emailIntent.setData(Uri.parse("samirmeh001@gmail.com"));
+            emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Отчёт об ошибке");
+            startActivity(emailIntent);
+        });
+        if(role.equals("ADMIN")){
+            btnDelDan.setVisibility(View.VISIBLE);
+        }
+        else btnDelDan.setVisibility(View.GONE);
+
+        btnDeleteAccount.setOnClickListener(v -> showDeleteDialog());
+        btnDelDan.setOnClickListener(v -> loadUsersInChat());
 
 
-        button3.setOnClickListener(v ->
-                startActivity(new Intent(requireContext(), RegistrationActivity.class)));
 
     }
+    private void showDeleteUserDialog(String loginToDelete) {
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Удалить пользователя")
+                .setMessage("Удалить " + loginToDelete + " из чата?")
+                .setPositiveButton("Удалить", (d, w) -> deleteUserFromChat(loginToDelete))
+                .setNegativeButton("Отмена", null)
+                .show();
+    }
+    private void deleteUserFromChat(String loginToDelete) {
+
+        new Thread(() -> {
+            try {
+                OkHttpClient client = new OkHttpClient();
+
+                Request request = new Request.Builder()
+                        .url("https://t7lvb7zl-8080.euw.devtunnels.ms/api/chats_data/delete?login="
+                                + loginToDelete + "&chatLogin=" + chatLogin)
+                        .delete()
+                        .build();
+
+                client.newCall(request).execute().close();
+
+                requireActivity().runOnUiThread(() ->
+                        Toast.makeText(requireContext(), "Пользователь удалён", Toast.LENGTH_SHORT).show()
+                );
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    private void showUsersDialog(List<ChatData> users) {
+
+        String[] logins = new String[users.size()];
+
+        for (int i = 0; i < users.size(); i++) {
+            logins[i] = users.get(i).getUserLogin();
+        }
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Пользователи чата")
+                .setItems(logins, (dialog, which) -> {
+
+                    String selectedLogin = users.get(which).getUserLogin();
+
+                    showDeleteUserDialog(selectedLogin);
+
+                })
+                .setNegativeButton("Закрыть", null)
+                .show();
+    }
+
+    private void loadUsersInChat() {
+
+        new Thread(() -> {
+            try {
+                OkHttpClient client = new OkHttpClient();
+
+                Request request = new Request.Builder()
+                        .url("https://t7lvb7zl-8080.euw.devtunnels.ms/api/chats_data/get_chats_users/" + chatLogin)
+                        .get()
+                        .build();
+
+                Response response = client.newCall(request).execute();
+
+                String json = response.body().string();
+
+                Gson gson = new Gson();
+                Type type = new TypeToken<List<ChatData>>(){}.getType();
+                List<ChatData> users = gson.fromJson(json, type);
+
+                requireActivity().runOnUiThread(() -> showUsersDialog(users));
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    public static boolean isWifiOnly(Context context) {
+        return context
+                .getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+                .getBoolean("wifi_only", false);
+    }
+    public static boolean isWifiConnected(Context context) {
+        android.net.ConnectivityManager cm =
+                (android.net.ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        android.net.NetworkCapabilities caps =
+                cm.getNetworkCapabilities(cm.getActiveNetwork());
+
+        return caps != null &&
+                caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI);
+    }
+
+    private void showDeleteDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Удаление аккаунта")
+                .setMessage("Вы уверены, что хотите удалить аккаунт? Это действие нельзя отменить.")
+                .setNegativeButton("Отмена", null)
+                .setPositiveButton("Удалить", (dialog, which) -> deleteAccount())
+                .show();
+    }
+    private void loadWifiSetting() {
+        boolean wifiOnly = requireContext()
+                .getSharedPreferences("AppPrefs", android.content.Context.MODE_PRIVATE)
+                .getBoolean("wifi_only", false);
+
+        switchWifiOnly.setChecked(wifiOnly);
+
+        switchWifiOnly.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            requireContext()
+                    .getSharedPreferences("AppPrefs", android.content.Context.MODE_PRIVATE)
+                    .edit()
+                    .putBoolean("wifi_only", isChecked)
+                    .apply();
+        });
+    }
+
+    private void deleteAccount() {
+        String login = requireContext()
+                .getSharedPreferences("AppPrefs", android.content.Context.MODE_PRIVATE)
+                .getString("login", "account");
+
+        // 1. Удаляем на сервере
+        deleteAccountFromServer(login);
+
+        // 2. Удаляем локально
+        DatabaseHelper.getInstance(requireContext()).deleteUser(login);
+
+        // 3. Очищаем SharedPreferences
+        requireContext()
+                .getSharedPreferences("AppPrefs", android.content.Context.MODE_PRIVATE)
+                .edit()
+                .clear()
+                .apply();
+
+        // 4. Переход на регистрацию
+        startActivity(new Intent(requireContext(), RegistrationActivity.class));
+        requireActivity().finish();
+    }
+    private void deleteAccountFromServer(String login) {
+
+        new Thread(() -> {
+            try {
+                okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
+
+                okhttp3.Request request = new okhttp3.Request.Builder()
+                        .url("https://t7lvb7zl-8080.euw.devtunnels.ms/api/users/delete?login=" + login)
+                        .delete()
+                        .build();
+
+                client.newCall(request).execute().close();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+
 
     private void openGallery() {
         pickImageLauncher.launch("image/*");

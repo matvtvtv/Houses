@@ -24,6 +24,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         return instance;
     }
+    public void deleteUser(String login) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.delete("users", "login=?", new String[]{login});
+    }
 
     private DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);

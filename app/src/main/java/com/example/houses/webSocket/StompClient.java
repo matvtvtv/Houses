@@ -1,9 +1,13 @@
 package com.example.houses.webSocket;
 
+import static com.example.houses.ui.SettingsFragment.isWifiConnected;
+import static com.example.houses.ui.SettingsFragment.isWifiOnly;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.example.houses.model.ChatMessage;
 import com.example.houses.model.ExchangeOffer;
@@ -73,6 +77,10 @@ public class StompClient {
     public void connect() {
         if (connected || connecting) return;
         connecting = true;
+        if (isWifiOnly(context) && !isWifiConnected(context)) {
+            Toast.makeText(context, "Загрузка разрешена только по Wi-Fi", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         Request req = new Request.Builder().url(serverUrl).build();
         ws = client.newWebSocket(req, new WebSocketListener() {

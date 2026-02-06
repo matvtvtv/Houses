@@ -30,7 +30,7 @@ public class NotificationForegroundService extends Service {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Houses работает")
                 .setContentText("Ожидание новых уведомлений")
-                .setSmallIcon(R.drawable.bg_day_item)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setOngoing(true)
                 .build();
 

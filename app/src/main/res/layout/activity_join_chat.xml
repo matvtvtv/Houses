@@ -33,5 +33,13 @@
         app:backgroundTint="@color/light_blue"
         android:layout_width="match_parent"
         android:layout_height="48dp"/>
+    <ProgressBar
+        android:id="@+id/progressJoin"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center"
+        android:layout_marginTop="16dp"
+        android:visibility="gone"/>
+
 
 </LinearLayout>

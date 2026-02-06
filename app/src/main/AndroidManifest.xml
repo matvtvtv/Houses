@@ -18,7 +18,7 @@
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="HomeHelper"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Houses"
@@ -47,7 +47,7 @@
             android:name=".JoinChatActivity"
             android:configChanges="orientation|screenSize"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            />
         <activity
             android:name=".CreateChatActivity"
             android:configChanges="orientation|screenSize"

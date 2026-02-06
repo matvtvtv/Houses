@@ -45,7 +45,7 @@ public class NotificationWorker extends Worker {
 
         // Создаем уведомление
         NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
-                .setSmallIcon(R.drawable.bg_day_item)  // Иконка уведомления
+                .setSmallIcon(R.drawable.ic_launcher_foreground)  // Иконка уведомления
                 .setContentTitle("Задания на день")
                 .setContentText("выполните задания и получите монеты")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)  // Высокий приоритет

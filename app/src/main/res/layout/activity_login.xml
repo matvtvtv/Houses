@@ -65,6 +65,12 @@
             android:textColor="@android:color/white"
             app:cornerRadius="12dp"
             app:backgroundTint="@color/light_blue"/>
-
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:visibility="gone"/>
     </LinearLayout>
 </ScrollView>

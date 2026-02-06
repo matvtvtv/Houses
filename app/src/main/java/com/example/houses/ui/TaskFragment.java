@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -81,6 +82,9 @@ public class TaskFragment extends Fragment {
     private DateAdapter dateAdapter;
     private LocalDate selectedDate;
     private View rootView;
+    private ProgressBar progressTasks;
+    private TextView textStatus;
+
 
     private final List<TaskInstanceDto> allTasks = new ArrayList<>();
 
@@ -116,12 +120,14 @@ public class TaskFragment extends Fragment {
         userRole = preferences.getString("role", "CHILD");
 
         httpClient = new OkHttpClient();
+        progressTasks = view.findViewById(R.id.progressTasks);
+        textStatus = view.findViewById(R.id.textStatus);
 
         recyclerTasks = view.findViewById(R.id.recyclerTasks);
         rootLayout = view.findViewById(R.id.rootLayout);
         textView = view.findViewById(R.id.textView);
         coinContainer = view.findViewById(R.id.coinContainer);
-        textView.setText("логин группы: " + chatLogin);
+        textView.setText("Здравсвуйте " + userLogin);
         recyclerTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
         btnCreate = view.findViewById(R.id.btnCreateTask);
         textCoins = view.findViewById(R.id.textCoins);
@@ -301,6 +307,7 @@ public class TaskFragment extends Fragment {
                 requireActivity().runOnUiThread(() -> {
                     if (adapter != null) {
                         adapter.addOrUpdate(instanceDto);
+                        hideStatus();
                         scheduleSmartRefresh();
                     }
 
@@ -526,12 +533,16 @@ private void loadChatUsersAndShowDialog(String chatLogin, String currentUserRole
 
 
     private void loadTasksRange(String chatLogin, LocalDate from, LocalDate to) {
+        requireActivity().runOnUiThread(this::showLoading);
         String url = SERVER_HTTP_TASKS + chatLogin + "?from=" + from + "&to=" + to;
         Request req = new Request.Builder().url(url).build();
         httpClient.newCall(req).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                Log.e(TAG, "tasks history fail", e);
+                requireActivity().runOnUiThread(() ->
+                        showError("Ошибка загрузки задач")
+                );
+
             }
 
             @Override
@@ -544,9 +555,15 @@ private void loadChatUsersAndShowDialog(String chatLogin, String currentUserRole
                 final List<TaskInstanceDto> list = gson.fromJson(body, listType);
                 if (list == null) return;
                 requireActivity().runOnUiThread(() -> {
-                    adapter.setAll(list);
-                    scheduleSmartRefresh();
+                    if (list.isEmpty()) {
+                        showEmpty();
+                    } else {
+                        hideStatus();
+                        adapter.setAll(list);
+                        scheduleSmartRefresh();
+                    }
                 });
+
             }
         });
     }
@@ -663,6 +680,27 @@ private void loadChatUsersAndShowDialog(String chatLogin, String currentUserRole
         });
 
         recyclerDays.setAdapter(dateAdapter);
+    }
+    private void showLoading() {
+        progressTasks.setVisibility(View.VISIBLE);
+        textStatus.setVisibility(View.GONE);
+    }
+
+    private void showError(String msg) {
+        progressTasks.setVisibility(View.GONE);
+        textStatus.setVisibility(View.VISIBLE);
+        textStatus.setText(msg);
+    }
+
+    private void showEmpty() {
+        progressTasks.setVisibility(View.GONE);
+        textStatus.setVisibility(View.VISIBLE);
+        textStatus.setText("Нет задач");
+    }
+
+    private void hideStatus() {
+        progressTasks.setVisibility(View.GONE);
+        textStatus.setVisibility(View.GONE);
     }
 
     @Override

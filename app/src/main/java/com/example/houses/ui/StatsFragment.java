@@ -78,23 +78,11 @@ public class StatsFragment extends Fragment {
 
         // Загружаем данные пользователя — пробуем несколько ключей на случай различий
         SharedPreferences prefs = requireActivity().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
-        userRole = firstNonEmpty(
-                prefs.getString("role", null),
-                prefs.getString("userRole", null),
-                prefs.getString("ROLE", null)
-        );
-        userLogin = firstNonEmpty(
-                prefs.getString("login", null),
-                prefs.getString("user_login", null)
-        );
-        chatLogin = firstNonEmpty(
-                prefs.getString("chatLogin", null),
-                prefs.getString("chat_login", null)
-        );
+        userRole = firstNonEmpty(prefs.getString("role", null));
+        userLogin = firstNonEmpty(prefs.getString("login", null));
+        chatLogin = firstNonEmpty(prefs.getString("chatLogin", null));
 
-        if (userRole == null) userRole = "";
-        if (userLogin == null) userLogin = "";
-        if (chatLogin == null) chatLogin = "";
+
 
         Log.d(TAG, "Role: [" + userRole + "], User: [" + userLogin + "], Chat: [" + chatLogin + "]");
 

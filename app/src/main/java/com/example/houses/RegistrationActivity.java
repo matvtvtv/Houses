@@ -11,8 +11,10 @@ import androidx.core.widget.CompoundButtonCompat;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
@@ -38,6 +40,8 @@ public class RegistrationActivity extends AppCompatActivity {
 
     private final OkHttpClient client = new OkHttpClient();
     private final Gson gson = new Gson();
+    private ProgressBar progressRegister;
+
 
     private static final String BASE_URL ="https://t7lvb7zl-8080.euw.devtunnels.ms/api/user/register";
 
@@ -49,8 +53,11 @@ public class RegistrationActivity extends AppCompatActivity {
 
         etLogin = findViewById(R.id.etLogin);
         etName = findViewById(R.id.etName);
+        etName.setVisibility(View.GONE);
+
         etPassword = findViewById(R.id.etPassword);
         etPasswordConform = findViewById(R.id.etPasswordСonfirmation);
+        progressRegister = findViewById(R.id.progressRegister);
 
         btnRegister = findViewById(R.id.btnRegister);
         btnEnterance = findViewById(R.id.btnEnterance);
@@ -72,7 +79,20 @@ public class RegistrationActivity extends AppCompatActivity {
 
     }
 
+    private void showLoading() {
+        progressRegister.setVisibility(View.VISIBLE);
+        btnRegister.setEnabled(false);
+    }
+
+    private void hideLoading() {
+        progressRegister.setVisibility(View.GONE);
+        btnRegister.setEnabled(true);
+    }
+
+
     private void register() {
+        showLoading();
+
         String login = etLogin.getText().toString().trim();
         String name = etName.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
@@ -80,7 +100,7 @@ public class RegistrationActivity extends AppCompatActivity {
 
 
 
-        if (login.isEmpty() || name.isEmpty() || password.isEmpty()|| passwordConform.isEmpty()) {
+        if (login.isEmpty()  || password.isEmpty()|| passwordConform.isEmpty()) {
             Toast.makeText(this, "Fill all fields", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -123,11 +143,13 @@ public class RegistrationActivity extends AppCompatActivity {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                runOnUiThread(() ->
-                        Toast.makeText(RegistrationActivity.this,
-                                "Server error: " + e.getMessage(),
-                                Toast.LENGTH_LONG).show());
-                Log.v("RedistationActivity", e.getMessage());
+                runOnUiThread(() -> {
+                    hideLoading();
+                    Toast.makeText(RegistrationActivity.this,
+                            "Ошибка сети: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                });
+
             }
 
             @Override
@@ -164,10 +186,13 @@ public class RegistrationActivity extends AppCompatActivity {
                     });
 
                 } else {
-                    runOnUiThread(() ->
-                            Toast.makeText(RegistrationActivity.this,
-                                    "User already exists",
-                                    Toast.LENGTH_SHORT).show());
+                    runOnUiThread(() -> {
+                        hideLoading();
+                        Toast.makeText(RegistrationActivity.this,
+                                "Пользователь уже существует",
+                                Toast.LENGTH_SHORT).show();
+                    });
+
                 }
             }
         });

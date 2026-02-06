@@ -79,6 +79,22 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:layout_marginTop="8dp">
+        <ProgressBar
+            android:id="@+id/progressTasks"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:visibility="gone"/>
+
+        <TextView
+            android:id="@+id/textStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:visibility="gone"/>
+
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerTasks"

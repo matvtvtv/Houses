@@ -5,6 +5,18 @@
     <string name="second_fragment_label">Second Fragment</string>
     <string name="next">Next</string>
     <string name="previous">Previous</string>
+    <string name="error_fill_fields">Заполните все поля</string>
+    <string name="error_password_mismatch">Пароли не совпадают</string>
+    <string name="error_choose_role">Выберите роль</string>
+    <string name="error_server">Ошибка сервера</string>
+    <string name="error_connection">Ошибка подключения</string>
+    <string name="error_user_exists">Пользователь уже существует</string>
+
+    <string name="success_registration">Регистрация прошла успешно</string>
+    <string name="success_join_chat">Вы успешно вошли в чат</string>
+
+    <string name="error_enter_chat_login">Введите логин чата</string>
+    <string name="error_chat_not_found">Чат не найден или вы уже подключены</string>
 
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
